@@ -23,7 +23,7 @@ sub new {
 	my $levels = shift;
 
 	my $self = {
-		levels => $levels,
+		levels => [@{$levels}],
 	};
 
 	bless $self, $class;
