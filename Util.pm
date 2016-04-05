@@ -12,12 +12,22 @@ sub git_tree_dirty {
 	return ($git_branch eq 'master' and system('git diff-files --quiet')) ? 1 : 0;
 }
 
-sub git_version {
+sub git_desribe {
 	my $git_path = shift;
 
 	$git_path = '.' unless defined $git_path;
 
 	my $git_version = `git -C $git_path describe --tags --dirty`;
+	chomp $git_version;
+	return $git_version;
+}
+
+sub git_version {
+	my $git_path = shift;
+
+	$git_path = '.' unless defined $git_path;
+
+	my $git_version = `git -C $git_path rev-parse --short HEAD`;
 	chomp $git_version;
 	return $git_version;
 }
