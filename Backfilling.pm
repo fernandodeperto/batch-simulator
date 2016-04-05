@@ -35,11 +35,6 @@ sub new {
 
 	$self->{current_time} = 0;
 
-	# temporary variables to calculate the average stretch
-	$self->{processed_jobs} = 0;
-	$self->{total_bounded_stretch} = 0;
-	$self->{total_original_bounded_stretch} = 0;
-
 	return $self;
 }
 
@@ -177,7 +172,6 @@ sub start_jobs {
 
 	$self->{reserved_jobs} = \@remaining_reserved_jobs;
 	$self->{events}->set_started_jobs(\@newly_started_jobs) if ($self->{uses_external_simulator});
-
 	return;
 }
 
