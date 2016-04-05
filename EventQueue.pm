@@ -12,10 +12,6 @@ use Job;
 
 use Debug;
 
-# Creates a new EventQueue object.
-
-# The objects uses a JSON file to read the information about the jobs and a
-# UNIX socket to receive events from the external simulator.
 sub new {
 	my $class = shift;
 
@@ -28,7 +24,7 @@ sub new {
 	my $json_data = read_file($self->{json_file});
 	$self->{json} = decode_json($json_data);
 
-	# Get information about the jobs
+	# get information about the jobs
 	for my $job (@{$self->{json}->{jobs}}) {
 		my $id = $job->{id};
 
@@ -36,7 +32,7 @@ sub new {
 			$job->{id}, # job number
 			undef,
 			$job->{original_wait_time},
-			$job->{walltime}, #it is a lie but temporary
+			$job->{walltime}, # it is a lie but temporary
 			$job->{res}, # allocated CPUs
 			undef,
 			undef,
@@ -48,7 +44,7 @@ sub new {
 		);
 	}
 
-	# Generate the UNIX socketa
+	# generate the UNIX socketa
 	do {
 		sleep(1);
 
@@ -68,19 +64,16 @@ sub new {
 	return $self;
 }
 
-# Returns the number of cpus in the json file
 sub cpu_number {
 	my $self = shift;
 	return $self->{json}->{nb_res};
 }
 
-# Returns the current time in the external simulator.
 sub current_time {
 	my $self = shift;
 	return $self->{current_simulator_time};
 }
 
-# Informs the external simulator that jobs have started.
 sub set_started_jobs {
 	my $self = shift;
 	my $jobs = shift;
@@ -107,7 +100,6 @@ sub set_started_jobs {
 	return;
 }
 
-# Retrieves all the available events in the event queue.
 sub retrieve_all {
 	my $self = shift;
 
@@ -145,15 +137,6 @@ sub retrieve_all {
 	return @incoming_events;
 }
 
-# Uses a loop to receive size bytes from the network.
-
-# With the current implementation, the routine starts writing on an empty
-# string. The loop is used to continuously receive data from the socket. If
-# somehow the socket is closed and stops transmitting data, the routine stops
-# and returns whatever has been read up to that point.
-
-# The return value is an string with the received message. It can be empty if
-# nothing was read but the socket is still working.
 sub recv {
 	my $self = shift;
 	my $size = shift;

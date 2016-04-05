@@ -11,7 +11,7 @@ use Carp;
 use Tree;
 use ProcessorRange;
 
-# Default power, latency and bandwidth values
+# default power, latency and bandwidth values
 use constant CLUSTER_POWER => "23.492E9f";
 use constant CLUSTER_BANDWIDTH => "1.25E9Bps";
 use constant LINK_BANDWIDTH => "1.25E9Bps";
@@ -59,7 +59,7 @@ sub _build_tree {
 	my $next_level_nodes = $self->{levels}->[$level + 1]/$self->{levels}->[$level];
 	my @next_level_nodes_ids = map {$next_level_nodes * $node + $_} (0..($next_level_nodes - 1));
 
-	# Last level before the leafs/nodes
+	# last level before the leafs/nodes
 	if ($level == $#{$self->{levels}} - 1) {
 		my $tree_content = {
 			total_size => (defined $available_cpus->[$node]) ? $available_cpus->[$node] : 0,
@@ -94,10 +94,10 @@ sub _choose_combination {
 	my $level = shift;
 	my $requested_cpus = shift;
 
-	# Return nothing if requested_cpus is 0
+	# return nothing if requested_cpus is 0
 	return unless ($requested_cpus);
 
-	# Return if at the last level
+	# return if at the last level
 	return [$tree->content()->{id}, $requested_cpus] if ($level == $#{$self->{levels}} - 1);
 
 	my $best_combination = $tree->content()->{$requested_cpus}->{combination};
@@ -119,12 +119,12 @@ sub _choose_cpus {
 	my $tree = shift;
 	my $requested_cpus = shift;
 
-	# No requested cpus
+	# no requested cpus
 	return unless $requested_cpus;
 
 	my @children = @{$tree->children()};
 
-	# Leaf node/CPU
+	# leaf node/CPU
 	return $tree->content()->{id} if (defined $tree->content()->{id});
 
 	my $best_combination = $tree->content()->{$requested_cpus};
@@ -143,7 +143,7 @@ sub _combinations {
 	my @children = @{$tree->children()};
 	my $last_child = $#children;
 
-	# Last node
+	# last node
 	return $requested_cpus if ($node == $last_child);
 
 	my @remaining_children = @children[($node + 1)..$last_child];
@@ -168,15 +168,15 @@ sub _score {
 	my $level = shift;
 	my $requested_cpus = shift;
 
-	# No needed CPUs
+	# no needed CPUs
 	return 0 unless $requested_cpus;
 
 	my $max_depth = $#{$self->{levels}} - 1;
 
-	# Leaf/CPU
+	# leaf/CPU
 	return 0 if ($level == $max_depth);
 
-	# Best combination already saved
+	# best combination already saved
 	return $tree->content()->{$requested_cpus}->{score} if (defined $tree->content()->{$requested_cpus});
 
 	my @children = @{$tree->children()};
@@ -195,7 +195,7 @@ sub _score {
 			$score = max($score, $child_score);
 		}
 
-		# Add to the score if there is communication between different child nodes
+		# add to the score if there is communication between different child nodes
 		$score += ($max_depth + 1 - $level) if (max(@{$combination}) < $requested_cpus);
 
 		if ($score < $best_combination{score}) {
@@ -349,22 +349,22 @@ sub build_platform_xml {
 
 	$xml->{platform} = {version => 4};
 
-	# Root system
+	# root system
 	$xml->{platform}{AS} = {
 		id => "AS_Root",
 		routing => "Floyd",
 	};
 
-	# Tree system
+	# tree system
 	$xml->{platform}{AS}{AS} = {
 		id => "AS_Tree",
 		routing => "Floyd",
 	};
 
-	# Push the first router
-	push @{$xml->{platform}{AS}{AS}{router}}, {id => "R-0-0"};
+	# push the first router
+	Rush @{$xml->{platform}{AS}{AS}{router}}, {id => "R-0-0"};
 
-	# Build levels
+	# build levels
 	for my $level (1..($#platform_parts - 1)) {
 		my $nodes_number = $platform_parts[$level];
 
@@ -386,7 +386,7 @@ sub build_platform_xml {
 		}
 	}
 
-	# Master host
+	# master host
 	push @{$xml->{platform}{AS}{cluster}}, {
 			id => 'C-MH',
 			prefix => 'master_host',
@@ -412,7 +412,7 @@ sub build_platform_xml {
 		link_ctn => {id => 'L-MH'},
 	};
 
-	# Clusters
+	# clusters
 	for my $cluster (0..($platform_parts[$#platform_parts - 1] - 1)) {
 		push @{$xml->{platform}{AS}{cluster}}, {
 			id => "C-$cluster",
@@ -465,7 +465,7 @@ sub job_level_distance {
 	my $last_level = $#{$self->{levels}};
 	my $clusters_number = $self->{levels}->[$last_level - 1];
 
-	# Return 1 if there is only one cluster
+	# return 1 if there is only one cluster
 	return 1 if (@used_clusters == 1);
 
 	for my $level (0..($last_level - 2)) {
@@ -492,10 +492,10 @@ sub job_relative_level_distance {
 
 	my @used_clusters = $self->job_used_clusters($assigned_processors);
 
-	# Return 1 if there is only one cluster
+	# return 1 if there is only one cluster
 	return 1 if (scalar @used_clusters == 1);
 
-	# Compute minimum level distance for the job
+	# compute minimum level distance for the job
 	my $minimum_level_distance;
 	for my $level (reverse(0..($last_level - 1))) {
 		my $cpus_per_level = $self->{levels}->[$last_level] / $self->{levels}->[$level];
@@ -521,9 +521,6 @@ sub job_relative_level_distance {
 
 # Contiguity and locality
 
-# Returns 1 if the assigned processors form a contiguous block and 0 if not.
-# Receives as parameter a list of processor ranges in the form of a
-# ProcessorRange object. Evaluation is in scalar context.
 sub job_contiguity {
 	my $self = shift;
 	my $assigned_processors = shift;
@@ -537,9 +534,6 @@ sub job_contiguity {
 	return 0;
 }
 
-# Returns the contiguity factor for a job. Receives as parameter a list of
-# processor ranges in the form of a ProcessorRange object. Evaluation may be in
-# list or schalar context, depending on how the retun value will be used.
 sub job_contiguity_factor {
 	my $self = shift;
 	my $assigned_processors = shift;
@@ -552,9 +546,6 @@ sub job_contiguity_factor {
 	return @{$ranges};
 }
 
-# Returns the locality factor for a job. Receives as parameter a list of
-# processor ranges in the form of a ProcessorRange object. Evaluation is done
-# in scalar context.
 sub job_locality {
 	my $self = shift;
 	my $assigned_processors = shift;
@@ -565,9 +556,6 @@ sub job_locality {
 	return 0;
 }
 
-# Returns the list of used clusters by a job. Receives as parameter a list of
-# processor ranges in the form of a ProcessorRange object. Evaluation may be in
-# list or scalar context, depending on how the return value will be used.
 sub job_used_clusters {
 	my $self = shift;
 	my $assigned_processors = shift;
@@ -655,9 +643,6 @@ sub available_cpus_in_clusters {
 	return \@available_cpus;
 }
 
-# Returns the locality factor for a job. Receives as parameter a list of
-# processor ranges in the form of a ProcessorRange object. Evaluation is done
-# in scalar context.
 sub job_locality_factor {
 	my $self = shift;
 	my $assigned_processors = shift;

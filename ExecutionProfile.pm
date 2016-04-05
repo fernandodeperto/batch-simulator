@@ -37,11 +37,6 @@ sub new {
 	return $self;
 }
 
-# Tries to find on which processors a job starting at starting_time can execute.
-
-# This routine uses the intersection of processor sets to find which processors
-# can be used to execute the job starting at starting_time. It returns the list
-# of all processors available during that time.
 sub get_free_processors {
 	my $self = shift;
 	my $job = shift;
@@ -86,10 +81,6 @@ sub get_free_processors {
 	return $left_processors;
 }
 
-# Returns the available processors.
-#
-# Receives a time as parameter. The
-# evaluation can be done in scalar or list context.
 sub available_processors {
 	my $self = shift;
 	my $starting_time = shift;
@@ -98,28 +89,6 @@ sub available_processors {
 	return $profile->processors()->processors_ids() if defined $profile;
 }
 
-# Removes a job from the execution profile.
-#
-# When a job finishes early or it's reservation is canceled (i.e. it is being
-# moved) this routine is used to put those resources back in the execution
-# profile. While doing that, a few cases can appear:
-#
-# There are no profiles for the duration of the job. This can happen if all the
-# resources were being used. In this case, one profile is created and the routine
-# ends.
-#
-# A profile must be split at the beginning of the job. In this case, a second
-# profile is created and pushed in the list of impacted profiles.
-#
-# A profile must be split at the end of the job. Similarly, a second profile is
-# created and pushed in the list of impacted profiles.
-#
-# Existence of gaps in the execution profile during the execution of the job.
-# In this case a new profile is created for the duration of the gap.
-#
-# Absence of a profile at the end of the job. This happens if the job ends and
-# there is no profile to be updated for some part of the job. In this case a
-# profile is also created with the processors used by the job.
 sub remove_job {
 	my $self = shift;
 	my $job = shift;
@@ -143,7 +112,7 @@ sub remove_job {
 		# avoid starting in the past
 		my $start = max($current_time, $starting_time);
 
-		# Only remove if it is still there
+		# only remove if it is still there
 		if (not float_equal($job_ending_time, $start) and $job_ending_time > $start) {
 			my $new_profile = Profile->new(
 				$start,
@@ -225,10 +194,6 @@ sub remove_job {
 	return;
 }
 
-# Adds a job to the execution profile at the time starting_time.
-
-# This routine finds all the profiles that are impacted by the addition of the
-# job and updates them, removing available CPUs.
 sub add_job  {
 	my $self = shift;
 	my $starting_time = shift;
@@ -258,13 +223,6 @@ sub add_job  {
 	return;
 }
 
-# Checks if it is possible to start a job at starting_time.
-
-# This routine uses the number of CPUs to answer if it would be possible to
-# assign the job at the given time.
-
-# Note that this routine does not check the intersection of the available CPUs
-# for the duration of the job.
 sub could_start_job {
 	my $self = shift;
 	my $job = shift;
@@ -298,23 +256,15 @@ sub could_start_job {
 	return $min_processors >= $job->requested_cpus();
 }
 
-# Find the first profile that has enough processors for the whole duration of
-# the job.
-
-# This routine uses all the steps required to assign the job using the
-# execution profile. It goes through all the profiles and see if they have
-# enough CPUs for the job.  When a suitable place for the job is found, the
-# routine returns the starting time and ranges of CPUs that can be used to
-# execute the job.
 sub find_first_profile {
 	my $self = shift;
 	my $job = shift;
 
-	# Used to return the results
+	# used to return the results
 	my $starting_time;
 	my $processors;
 
-	# Used to keep track of the starting times
+	# used to keep track of the starting times
 	my @included_profiles;
 	my $previous_ending_time;
 
@@ -346,12 +296,6 @@ sub find_first_profile {
 	return;
 }
 
-# Updates the execution profile with the current time.
-
-# When the time changes inside the scheduler, we need to clean the execution
-# profile accordingly. That means removing profiles that start before the
-# current time and won't have an impact anymore on jobs. This also includes
-# splitting profiles that started before the current time but end after.
 sub set_current_time {
 	my $self = shift;
 	my $current_time = shift;

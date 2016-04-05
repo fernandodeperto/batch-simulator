@@ -22,10 +22,6 @@ use constant {
 	SUBMISSION_EVENT => 1
 };
 
-# Creates a new Backfilling object.
-
-# The parameters are redirected to the Schedule class and an execution profile
-# is added.
 sub new {
 	my $class = shift;
 	my $reduction_algorithm = shift;
@@ -39,7 +35,7 @@ sub new {
 
 	$self->{current_time} = 0;
 
-	# Temporary variables to calculate the average stretch
+	# temporary variables to calculate the average stretch
 	$self->{processed_jobs} = 0;
 	$self->{total_bounded_stretch} = 0;
 	$self->{total_original_bounded_stretch} = 0;
@@ -63,22 +59,6 @@ sub new_simulation {
 	return $self;
 }
 
-# Executed the backfilling algorithm.
-
-# The backfilling algorithm uses time based events to detect when jobs are
-# submitted or finished.
-
-# It is important to note that from the viewpoint of the algorithm, the actual
-# run time of a job is unknown until it starts (i.e. only the submitted run
-# time is used). When the job starts, the scheduler will create an ending event
-# with the real ending time of the job.
-
-# Also, a particular important part of this implementation of the algorithm is
-# the reassignment of jobs. When a job finishes before it's submitted ending
-# time, the algorithm tries to reuse that space with jobs that were scheduled
-# to start later. For every job that has been submitted but hasn't started yet,
-# the algorithm either starts it now using the new space or puts it back in
-# it's original position.
 sub run {
 	my $self = shift;
 
@@ -97,7 +77,7 @@ sub run {
 		) for (@{$self->{trace}->jobs()});
 	}
 
-	$self->{run_time} = time(); # time measure
+	$self->{run_time} = time();
 
 	while (my @events = $self->{events}->retrieve_all()) {
 		if ($self->{uses_external_simulator}) {
@@ -117,7 +97,7 @@ sub run {
 		print STDERR "current time: $self->{current_time} events @events\n";
 		##DEBUG_END
 
-		# Ending event
+		# ending event
 		for my $event (@{$typed_events[JOB_COMPLETED_EVENT]}) {
 
 			my $job = $event->payload();
@@ -129,7 +109,7 @@ sub run {
 			delete $self->{started_jobs}->{$job->job_number()};
 
 			if ($self->{uses_external_simulator}) {
-				#TODO Revisit the problem that happens when current time is after job ending time
+				#TODO revisit the problem that happens when current time is after job ending time
 				$self->{execution_profile}->remove_job($job, $self->{current_time});
 				$job->run_time($self->{current_time} - $job->starting_time());
 			} else {
@@ -137,10 +117,10 @@ sub run {
 			}
 		}
 
-		# Reassign all reserved jobs if any job finished
+		# reassign all reserved jobs if any job finished
 		$self->reassign_jobs() if (@{$typed_events[JOB_COMPLETED_EVENT]});
 
-		# Submission events
+		# submission events
 		for my $event (@{$typed_events[SUBMISSION_EVENT]}) {
 			my $job = $event->payload();
 
@@ -158,24 +138,17 @@ sub run {
 		$self->start_jobs();
 	}
 
-	# All jobs should be scheduled and started
+	# all jobs should be scheduled and started
 	die 'there are still jobs in the reserved queue: ' . join(' ', @{$self->{reserved_jobs}}) if @{$self->{reserved_jobs}};
 
 	$self->{execution_profile}->free_profiles();
 
-	# Time measure
+	# time measure
 	$self->{run_time} = time() - $self->{run_time};
 
 	return;
 }
 
-# Tries to start all jobs that have already been submitted.
-# When a job can be started, a new ending event is created and pushed into the
-# events data structure.
-
-# Note on possible improvement: if jobs in the reserved jobs list are ordered
-# by starting time, it may be possible to stop the loop when the first job that
-# can't start now is found.
 sub start_jobs {
 	my $self = shift;
 	my @remaining_reserved_jobs;
@@ -208,11 +181,6 @@ sub start_jobs {
 	return;
 }
 
-# Tries to reassign all the jobs that have been submitted but haven't started
-# yet.
-
-# For each job in the list, the routine checks if the job can start now. If that
-# is not possible, the job is returned to it's original position.
 sub reassign_jobs {
 	my $self = shift;
 
@@ -252,11 +220,6 @@ sub reassign_jobs {
 	return;
 }
 
-# Finds the first place in the schedule for a job.
-
-# This routine uses the execution profile to find when and on which processors
-# the job can be executed. It is then inserted into the list of jobs that have
-# been submitted but haven't started yet.
 sub assign_job {
 	my $self = shift;
 	my $job = shift;
@@ -271,7 +234,7 @@ sub assign_job {
 	print STDERR "chose starting time $starting_time and processors $chosen_processors duration " . $job->requested_time() . "\n";
 	##DEBUG_END
 
-	# Here we can decide the new run time based on the platform level
+	# here we can decide the new run time based on the platform level
 	my $job_platform_level = $self->{platform}->job_level_distance($chosen_processors);
 	my $new_job_run_time = $job->run_time() * $self->{platform}->speedup($job_platform_level - 1);
 

@@ -40,8 +40,6 @@ use constant {
 
 our @EXPORT = qw(JOB_STATUS_COMPLETED JOB_STATUS_FAILED JOB_STATUS_CANCELED);
 
-# Stringification
-
 sub stringification {
 	my $self = shift;
 
@@ -95,15 +93,10 @@ sub new {
 		think_time_prec_job => shift, #18
 	};
 
-	# Sanity checks for some of the job fields
+	# sanity checks for some of the job fields
 	$self->{status} = 5 if (($self->{run_time} == 0) and ($self->{status} == 1));
-
 	$self->{allocated_cpus} = $self->{requested_cpus} if ($self->{allocated_cpus} != $self->{requested_cpus});
-
 	$self->{run_time} = $self->{requested_time} if ($self->{requested_time} < $self->{run_time});
-
-	# Reset the job status for now. Maybe later we will do something
-	# different with this
 	$self->{status} = JOB_STATUS_COMPLETED;
 
 	bless $self, $class;

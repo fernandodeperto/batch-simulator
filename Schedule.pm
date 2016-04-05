@@ -13,7 +13,8 @@ use EventQueue;
 use Platform;
 use Job;
 
-# Creates a new Schedule object.
+# Constructors 
+
 sub new {
 	my $class = shift;
 	my $platform = shift;
@@ -54,8 +55,6 @@ sub new_simulation {
 	return $self;
 }
 
-# Runs the basic schedule algorithm, calling the assign_job routine from the
-# child class.
 sub run {
 	my $self = shift;
 
