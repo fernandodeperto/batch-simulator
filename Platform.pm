@@ -362,7 +362,7 @@ sub build_platform_xml {
 	};
 
 	# push the first router
-	Rush @{$xml->{platform}{AS}{AS}{router}}, {id => "R-0-0"};
+	push @{$xml->{platform}{AS}{AS}{router}}, {id => "R-0-0"};
 
 	# build levels
 	for my $level (1..($#platform_parts - 1)) {
