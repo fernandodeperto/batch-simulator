@@ -334,6 +334,8 @@ sub speedup {
 	my $self = shift;
 	my $level = shift;
 
+	return unless defined $self->{speedup};
+
 	return $self->{speedup}->[$level] if defined $level;
 	return $self->{speedup};
 }

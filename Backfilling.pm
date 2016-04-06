@@ -229,16 +229,18 @@ sub assign_job {
 	##DEBUG_END
 
 	# here we can decide the new run time based on the platform level
-	my $job_platform_level = $self->{platform}->job_level_distance($chosen_processors);
-	my $new_job_run_time = $job->run_time() * $self->{platform}->speedup($job_platform_level - 1);
+	if (defined $self->{platform}->speedup()) {
+		my $job_platform_level = $self->{platform}->job_level_distance($chosen_processors);
+		my $new_job_run_time = $job->run_time() * $self->{platform}->speedup($job_platform_level - 1);
 
-	if ($new_job_run_time > $job->requested_time()) {
-		$job->run_time($job->requested_time());
-		$job->status(JOB_STATUS_FAILED);
-	}
+		if ($new_job_run_time > $job->requested_time()) {
+			$job->run_time($job->requested_time());
+			$job->status(JOB_STATUS_FAILED);
+		}
 
-	else {
-		$job->run_time($new_job_run_time);
+		else {
+			$job->run_time($new_job_run_time);
+		}
 	}
 
 	$job->assign($starting_time, $chosen_processors);
