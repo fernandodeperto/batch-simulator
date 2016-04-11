@@ -7,9 +7,13 @@ use Exporter qw(import);
 our @EXPORT_OK = qw(FALSE TRUE git_tree_dirty git_version float_equal float_precision git_tree_dirty git_version);
 
 sub git_tree_dirty {
-	my $git_branch = `git symbolic-ref --short HEAD`;
+	my $git_path = shift;
+
+	$git_path = '.' unless defined $git_path;
+
+	my $git_branch = `git -C $git_path symbolic-ref --short HEAD`;
 	chomp $git_branch;
-	return ($git_branch eq 'master' and system('git diff-files --quiet')) ? 1 : 0;
+	return system('git diff-files --quiet');
 }
 
 sub git_desribe {
