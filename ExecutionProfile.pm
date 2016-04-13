@@ -365,7 +365,7 @@ sub stringification {
 			return 1;
 		});
 
-	return join(', ', @profiles);
+	return join("\n", @profiles);
 }
 
 sub save_svg {

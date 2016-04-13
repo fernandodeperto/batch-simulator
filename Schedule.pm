@@ -27,7 +27,7 @@ sub new {
 		uses_external_simulator => 0,
 	};
 
-	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{platform}->processors_number();
+	die "not enough processors: ", $self->{trace}->needed_cpus() if $self->{trace}->needed_cpus() > $self->{platform}->processors_number();
 	$self->{trace}->unassign_jobs(); # make sure the trace is clean
 
 	bless $self, $class;

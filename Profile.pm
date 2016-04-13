@@ -39,7 +39,9 @@ sub new {
 sub stringification {
 	my $self = shift;
 
-	return "[$self->{starting_time} ; ($self->{processors}) " . (defined $self->{ending_time} ? ": $self->{ending_time}]" : "]");
+	my $cpus_number = scalar $self->{processors}->processors_ids();
+
+	return "[$self->{starting_time} ; $cpus_number = ($self->{processors}) " . (defined $self->{ending_time} ? ": $self->{ending_time}]" : "]");
 }
 
 sub processors {
