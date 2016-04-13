@@ -7,7 +7,7 @@ use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
 use ProcessorRange;
 
 use Data::Dumper;
-use List::Util qw(min);
+use List::Util qw(min sum);
 
 sub new {
 	my $class = shift;
@@ -33,7 +33,7 @@ sub reduce {
 	my $current_cluster;
 
 	my @clusters = $self->{platform}->job_processors_in_clusters($left_processors);
-	my @sorted_clusters = sort { scalar @{$a} <=> scalar @{$b} } (@clusters);
+	my @sorted_clusters = sort {cluster_size($b) <=> cluster_size($a)} (@clusters);
 
 	for my $cluster (@sorted_clusters) {
 		for my $pair (@{$cluster}) {
@@ -51,6 +51,11 @@ sub reduce {
 
 	$left_processors->affect_ranges(ProcessorRange::sort_and_fuse_contiguous_ranges(\@remaining_ranges));
 	return;
+}
+
+sub cluster_size {
+	my $cluster = shift;
+	return sum map {$_->[1] - $_->[0] + 1} (@{$cluster});
 }
 
 1;
