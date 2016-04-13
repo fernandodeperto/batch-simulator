@@ -44,10 +44,11 @@ sub stringification {
 	my $self = shift;
 
 	return join(' ',
-		map {(defined $_) ? $_ : '?'} (
+		map {(defined $_ ? $_ : '?')} (
 			$self->{job_number},
 			$self->{submit_time},
-			$self->wait_time(),
+			#(defined $self->wait_time() ? $self->wait_time() : $self->original_wait_time()),
+			$self->{original_wait_time},
 			$self->{run_time},
 			$self->{allocated_cpus},
 			$self->{avg_cpu_time},

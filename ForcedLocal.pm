@@ -8,7 +8,7 @@ use ProcessorRange;
 
 use Data::Dumper;
 use POSIX qw(ceil);
-use List::Util qw(min);
+use List::Util qw(min sum);
 
 sub new {
 	my $class = shift;
@@ -24,13 +24,15 @@ sub reduce {
 	my $job = shift;
 	my $left_processors = shift;
 
+	print STDERR "left processors: $left_processors\n" if $job->job_number() == 3;
+
 	my $target_number = $job->requested_cpus();
 
 	my @remaining_ranges;
 	my $used_clusters_number = 0;
 	my $current_cluster;
 	my @clusters = $self->{platform}->job_processors_in_clusters($left_processors);
-	my @sorted_clusters = sort { scalar @{$a} <=> scalar @{$b} } (@clusters);
+	my @sorted_clusters = sort {cluster_size($b) <=> cluster_size($a)} (@clusters);
 	my $target_clusters_number = ceil($target_number/$self->{platform}->cluster_size());
 
 	for my $cluster (@sorted_clusters) {
@@ -60,6 +62,11 @@ sub reduce {
 		$left_processors->remove_all();
 	}
 	return;
+}
+
+sub cluster_size {
+	my $cluster = shift;
+	return sum map {$_->[1] - $_->[0] + 1} (@{$cluster});
 }
 
 1;
