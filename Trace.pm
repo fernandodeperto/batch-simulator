@@ -281,4 +281,11 @@ sub load {
 	return $load;
 }
 
+sub normalize_run_times {
+	my $self = shift;
+	my $factor = shift;
+
+	$_->run_time(int($_->requested_time()/$factor)) for (@{$self->{jobs}});
+}
+
 1;

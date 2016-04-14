@@ -95,10 +95,10 @@ sub new {
 	};
 
 	# sanity checks for some of the job fields
-	$self->{status} = 5 if (($self->{run_time} == 0) and ($self->{status} == 1));
+	$self->{status} = JOB_STATUS_FAILED if (($self->{run_time} == 0) and ($self->{status} == JOB_STATUS_COMPLETED));
+	$self->{status} = JOB_STATUS_FAILED if $self->{status} == JOB_STATUS_CANCELED;
 	$self->{allocated_cpus} = $self->{requested_cpus} if ($self->{allocated_cpus} != $self->{requested_cpus});
 	$self->{run_time} = $self->{requested_time} if ($self->{requested_time} < $self->{run_time});
-	$self->{status} = JOB_STATUS_COMPLETED;
 
 	bless $self, $class;
 	return $self;
@@ -304,7 +304,8 @@ sub svg {
 	my $current_time = shift;
 	my $platform = shift;
 
-	my $job_platform_level = $platform->job_level_distance($self->{assigned_processors});
+	my $job_platform_level = $platform->job_relative_level_distance($self->{assigned_processors}, $self->requested_cpus());
+	#my $job_platform_level = $platform->job_level_distance($self->{assigned_processors});
 
 	$self->{assigned_processors}->ranges_loop(
 		sub {
