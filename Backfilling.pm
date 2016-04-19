@@ -25,6 +25,7 @@ use constant {
 sub new {
 	my $class = shift;
 	my $reduction_algorithm = shift;
+	my $communication_level = shift;
 
 	my $self = $class->SUPER::new(@_);
 
@@ -34,6 +35,7 @@ sub new {
 	);
 
 	$self->{current_time} = 0;
+	$self->{communication_level} = $communication_level;
 
 	return $self;
 }
@@ -231,7 +233,7 @@ sub assign_job {
 	# here we can decide the new run time based on the platform level
 	if (defined $self->{platform}->speedup()) {
 		my $job_platform_level = $self->{platform}->job_relative_level_distance($chosen_processors, $job->requested_cpus());
-		my $new_job_run_time = $job->run_time() * $self->{platform}->speedup($job_platform_level - 1);
+		my $new_job_run_time = $job->run_time() + $job->run_time() * $self->{communication_level} * $self->{platform}->speedup($job_platform_level - 1);
 
 		if ($new_job_run_time >= $job->requested_time()) {
 			$job->run_time($job->requested_time());

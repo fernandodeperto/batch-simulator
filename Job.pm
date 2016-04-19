@@ -95,8 +95,8 @@ sub new {
 	};
 
 	# sanity checks for some of the job fields
-	$self->{status} = JOB_STATUS_FAILED if (($self->{run_time} == 0) and ($self->{status} == JOB_STATUS_COMPLETED));
-	$self->{status} = JOB_STATUS_FAILED if $self->{status} == JOB_STATUS_CANCELED;
+	$self->{status} = JOB_STATUS_CANCELED if (($self->{run_time} == 0) and ($self->{status} == JOB_STATUS_COMPLETED));
+	$self->{status} = JOB_STATUS_CANCELED if $self->{status} == JOB_STATUS_FAILED;
 	$self->{allocated_cpus} = $self->{requested_cpus} if ($self->{allocated_cpus} != $self->{requested_cpus});
 	$self->{run_time} = $self->{requested_time} if ($self->{requested_time} < $self->{run_time});
 

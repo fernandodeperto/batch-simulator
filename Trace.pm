@@ -72,7 +72,6 @@ sub add_job {
 sub new_from_swf {
 	my $class = shift;
 	my $filename = shift;
-	my $jobs_number = shift;
 
 	my $self = {
 		filename => $filename,
@@ -82,7 +81,7 @@ sub new_from_swf {
 
 	open (my $file, '<', $self->{filename}) or die("unable to open $self->{filename}");
 
-	while (defined(my $line = <$file>) and (not defined $jobs_number or @{$self->{jobs}} < $jobs_number)) {
+	while (defined(my $line = <$file>)) {
 		my @fields = split(' ', $line);
 
 		next unless defined $fields[0];
@@ -110,9 +109,7 @@ sub keep_first_jobs {
 	my $self = shift;
 	my $jobs_number = shift;
 
-	my $end = min($#{$self->{jobs}}, $jobs_number - 1);
-	@{$self->{jobs}} = @{$self->{jobs}}[0..$end];
-
+	$self->{jobs} = [@{$self->{jobs}}[0..($jobs_number - 1)]] if $jobs_number < scalar @{$self->{jobs}};
 	return;
 }
 
@@ -286,6 +283,13 @@ sub normalize_run_times {
 	my $factor = shift;
 
 	$_->run_time(int($_->requested_time()/$factor)) for (@{$self->{jobs}});
+}
+
+sub normalize_requested_times {
+	my $self = shift;
+	my $factor = shift;
+
+	$_->requested_time($_->run_time() * $factor) for (@{$self->{jobs}});
 }
 
 1;
