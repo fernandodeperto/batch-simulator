@@ -15,7 +15,11 @@ use ProcessorRange;
 
 use Util qw(float_equal);
 
-use overload '""' => \&stringification, '<=>' => \&three_way_comparison;
+use overload
+	'""' => \&stringification,
+	'<=>' => \&three_way_comparison,
+	'-' => \&subtract,
+;
 
 sub new {
 	my $class = shift;
@@ -108,7 +112,7 @@ sub split_by_job {
 		$middle_profile->processors()->free_allocated_memory();
 	}
 
-	if (not defined $self->{ending_time} or ((not float_equal($job->submitted_ending_time(), $self->{ending_time})) and ($job->submitted_ending_time() < $self->{ending_time}))) {
+	if (not defined $self->{ending_time} or (not float_equal($job->submitted_ending_time(), $self->{ending_time}) and $job->submitted_ending_time() < $self->{ending_time})) {
 		my $end_profile = Profile->new($job->submitted_ending_time(), $self->{ending_time}, $self->{processors}->copy_range());
 		push @profiles, $end_profile;
 	}
@@ -137,7 +141,7 @@ sub ends_after {
 	my $time = shift;
 
 	return 1 unless defined $self->{ending_time};
-	return ((not float_equal($self->{ending_time}, $time)) and ($self->{ending_time} > $time));
+	return (not float_equal($self->{ending_time}, $time) and $self->{ending_time} > $time);
 }
 
 sub svg {
@@ -210,6 +214,18 @@ sub all_times_comparison {
 	return -$coef if defined $self->{ending_time} and $self->{ending_time} <= $other;
 	return $coef if $self->{starting_time} >= $other;
 	return 0;
+}
+
+sub subtract {
+	my $self = shift;
+	my $other = shift;
+	my $inverted = shift;
+
+	# Save two calls to the comparison functions if $other is a Profile
+	$other = $other->starting_time() if defined blessed($other) and blessed($other) eq 'Profile';
+
+	return $other - $self->{starting_time} if $inverted;
+	return $self->{starting_time} - $other;
 }
 
 1;

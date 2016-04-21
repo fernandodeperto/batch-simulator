@@ -194,8 +194,8 @@ sub reassign_jobs {
 		##DEBUG_END
 
 		##DEBUG_BEGIN
-		print STDERR "execution profile:\n", $self->{execution_profile}, "\n" if $job->job_number() == 3;
-		print STDERR "available cpus: ", scalar $self->{execution_profile}->available_processors($self->{current_time}), "\n" if $job->job_number() == 3;
+		print STDERR "execution profile:\n", $self->{execution_profile}, "\n";
+		print STDERR "available cpus: ", scalar $self->{execution_profile}->available_processors($self->{current_time}), "\n";
 		##DEBUG_END
 
 		if ($self->{execution_profile}->available_processors($self->{current_time}) >= $job->requested_cpus()) {
@@ -203,7 +203,7 @@ sub reassign_jobs {
 			my $assigned_processors = $job->assigned_processors();
 
 			##DEBUG_BEGIN
-			print STDERR "enough processors for job " . $job->job_number() . "\n" if $job->job_number() == 3;
+			print STDERR "enough processors for job " . $job->job_number() . "\n";
 			##DEBUG_END
 
 			$self->{execution_profile}->remove_job($job, $self->{current_time});
@@ -211,7 +211,7 @@ sub reassign_jobs {
 			my $new_processors;
 			if ($self->{execution_profile}->could_start_job($job, $self->{current_time})) {
 				##DEBUG_BEGIN
-				print STDERR "could start job " . $job->job_number() . "\n" if $job->job_number() == 3;
+				print STDERR "could start job " . $job->job_number() . "\n";
 				##DEBUG_END
 
 				$new_processors = $self->{execution_profile}->get_free_processors($job, $self->{current_time});
@@ -219,7 +219,7 @@ sub reassign_jobs {
 
 			if (defined $new_processors) {
 				##DEBUG_BEGIN
-				print STDERR "reassigning job " . $job->job_number() . " processors $new_processors\n" if $job->job_number() == 3;
+				print STDERR "reassigning job " . $job->job_number() . " processors $new_processors\n";
 				##DEBUG_END
 
 				$job->assign($self->{current_time}, $new_processors);
@@ -250,7 +250,7 @@ sub assign_job {
 	# here we can decide the new run time based on the platform level
 	if (defined $self->{platform}->speedup()) {
 		my $job_platform_level = $self->{platform}->job_relative_level_distance($chosen_processors, $job->requested_cpus());
-		my $new_job_run_time = $job->run_time() + $job->run_time() * $self->{communication_level} * $self->{platform}->speedup($job_platform_level - 1);
+		my $new_job_run_time = int($job->run_time() + $job->run_time() * $self->{communication_level} * $self->{platform}->speedup($job_platform_level - 1));
 
 		if ($new_job_run_time >= $job->requested_time()) {
 			$job->run_time($job->requested_time());

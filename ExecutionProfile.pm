@@ -97,6 +97,10 @@ sub remove_job {
 	my $starting_time = $job->starting_time();
 	my $job_ending_time = $job->submitted_ending_time();
 
+	##DEBUG_BEGIN
+	print STDERR "start $starting_time end $job_ending_time\n";
+	##DEBUG_END
+
 	my @impacted_profiles;
 	Profile::set_comparison_function('all_times');
 	$self->{profile_tree}->nodes_loop($starting_time, $job_ending_time,
@@ -107,6 +111,10 @@ sub remove_job {
 		}
 	);
 	Profile::set_comparison_function('default');
+
+	##DEBUG_BEGIN
+	print STDERR "impacted profiles:\n", join("\n", @impacted_profiles), "\n";
+	##DEBUG_END
 
 	unless (@impacted_profiles) {
 		# avoid starting in the past

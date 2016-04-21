@@ -7,6 +7,8 @@ use Data::Dumper;
 use Scalar::Util qw(refaddr);
 use Log::Log4perl qw(get_logger);
 
+use Util qw(float_equal);
+
 use constant {
 	LEFT => 0,
 	RIGHT => 1,
@@ -120,7 +122,7 @@ sub get_node_direction {
 
 	for my $direction (LEFT,RIGHT) {
 		next unless defined $self->{children}->[$direction];
-		return $direction if $self->{children}->[$direction] == $child;
+		return $direction if float_equal($self->{children}->[$direction], $child);
 	}
 }
 
@@ -157,7 +159,7 @@ sub find_node {
 	my $current_node = $self;
 
 	while (defined $current_node) {
-		last if $current_node->{content} == $key;
+		last if float_equal($current_node->{content}, $key);
 		my $direction = $current_node->get_direction_for($key);
 		$current_node = $current_node->{children}->[$direction];
 	}
@@ -178,18 +180,19 @@ sub nodes_loop {
 		if (defined $current_node) {
 			# go left first
 			push @parents, $current_node;
-			$current_node = ($current_node->{content} > $start_key) ? $current_node->{children}->[LEFT] : undef;
+			$current_node = (not float_equal($current_node->{content}, $start_key) and $current_node->{content} > $start_key) ? $current_node->{children}->[LEFT] : undef;
 		} else {
 			# we returned from exploration of a left child
 			$current_node = pop @parents;
 
 			# do content here
-			if ($current_node->{content} >= $start_key and (not defined $end_key or $current_node->{content} <= $end_key)) {
+			#if ((float_equal($current_node->{content}, $start_key) or $current_node->{content} > $start_key) and (not defined $end_key or float_equal($current_node->{content}, $end_key) or $current_node->{content} < $end_key)) {
+			if ((float_equal($current_node->{content}, $start_key) or $current_node->{content} > $start_key) and (not defined $end_key or $current_node->{content} <= $end_key)) {
 				return unless $routine->($current_node->{content});
 			}
 
 			# and continue with right subtree
-			$current_node = (not defined $end_key or $current_node->{content} < $end_key) ? $current_node->{children}->[RIGHT] : undef;
+			$current_node = (not defined $end_key or (not float_equal($current_node->{content}, $end_key) and $current_node->{content} < $end_key)) ? $current_node->{children}->[RIGHT] : undef;
 		}
 	}
 
@@ -210,7 +213,7 @@ sub children {
 sub get_direction_for {
 	my $self = shift;
 	my $key = shift;
-	return ($key < $self->{content}) ? LEFT : RIGHT;
+	return (not float_equal($key, $self->{content}) and $key < $self->{content}) ? LEFT : RIGHT;
 }
 
 # Write information of the tree on a file
