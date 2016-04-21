@@ -19,23 +19,24 @@ use ForcedPlatform;
 my ($trace_file, $jobs_number) = @ARGV;
 
 my @platform_levels = (1, 4, 8, 512);
-my @platform_speedup = (1.00, 8.00, 64.00);
+my @platform_speedup = (1.00, 10.0, 32.00);
+my $communication_level = 0.4;
 
 my $platform = Platform->new(\@platform_levels);
 $platform->set_speedup(\@platform_speedup);
 
-my $trace_original = Trace->new_from_swf($trace_file);
-$trace_original->remove_large_jobs($platform->processors_number());
-my $trace = Trace->new_from_trace($trace_original, $jobs_number);
-#my $trace = Trace->new_from_swf($trace_file);
-$trace->reset_jobs_numbers();
-$trace->reset_submit_times();
+#my $trace_original = Trace->new_from_swf($trace_file);
+#$trace_original->remove_large_jobs($platform->processors_number());
+#my $trace = Trace->new_from_trace($trace_original, $jobs_number);
+my $trace = Trace->new_from_swf($trace_file);
+#$trace->reset_jobs_numbers();
+#$trace->reset_submit_times();
 #$trace->fix_submit_times();
 #$trace->keep_first_jobs($jobs_number) if defined $jobs_number;
 
-my $reduction_algorithm = BestEffortPlatform->new($platform);
+my $reduction_algorithm = ForcedPlatform->new($platform);
 
-my $schedule = Backfilling->new($reduction_algorithm, $platform, $trace);
+my $schedule = Backfilling->new($reduction_algorithm, $communication_level, $platform, $trace);
 $schedule->run();
 
 my @results = (
