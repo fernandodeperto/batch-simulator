@@ -8,7 +8,6 @@ use List::Util qw(min max);
 use Data::Dumper;
 use Carp;
 
-use Util qw(float_equal float_precision);
 use Profile;
 use BinarySearchTree;
 use Platform;
@@ -52,10 +51,10 @@ sub get_free_processors {
 			my $profile = shift;
 
 			# stop if we have enough profiles
-			return 0 if ($duration >= $requested_time);
+			return 0 if $duration >= $requested_time;
 
 			# profiles must all be contiguous
-			return 0 unless float_equal($starting_time + $duration, $profile->starting_time());
+			return 0 unless $profile->starting_time() == $starting_time + $duration;
 
 			$left_processors->intersection($profile->processors());
 			return 0 if $left_processors->size() < $job->requested_cpus();
@@ -65,7 +64,7 @@ sub get_free_processors {
 		});
 
 	# check if the nodes_loop section found all needed CPUs
-	if ($left_processors->size() < $job->requested_cpus() or (not float_equal($duration, $requested_time) and $duration < $requested_time)) {
+	if ($left_processors->size() < $job->requested_cpus() or $duration < $requested_time) {
 		$left_processors->free_allocated_memory();
 		return;
 	}
@@ -121,7 +120,7 @@ sub remove_job {
 		my $start = max($current_time, $starting_time);
 
 		# only remove if it is still there
-		if (not float_equal($job_ending_time, $start) and $job_ending_time > $start) {
+		if ($job_ending_time > $start) {
 			my $new_profile = Profile->new(
 				$start,
 				$job_ending_time,
@@ -133,7 +132,7 @@ sub remove_job {
 	}
 
 	# split at the first profile
-	if (not float_equal($impacted_profiles[0]->starting_time(), $starting_time) and $impacted_profiles[0]->starting_time() < $starting_time) {
+	if ($impacted_profiles[0]->starting_time() < $starting_time) {
 		# remove
 		my $first_profile = shift @impacted_profiles;
 		$self->{profile_tree}->remove_content($first_profile);
@@ -178,7 +177,7 @@ sub remove_job {
 	for my $profile (@impacted_profiles) {
 		$profile->remove_job($job);
 
-		if (not float_equal($profile->starting_time(), $previous_profile_ending_time) and $profile->starting_time() > $previous_profile_ending_time) {
+		if ($profile->starting_time() > $previous_profile_ending_time) {
 			my $new_profile = Profile->new(
 				$previous_profile_ending_time,
 				$profile->starting_time(),
@@ -190,7 +189,7 @@ sub remove_job {
 	}
 
 	# gap at the end
-	if (not float_equal($job_ending_time, $previous_profile_ending_time) and $job_ending_time > $previous_profile_ending_time) {
+	if ($job_ending_time > $previous_profile_ending_time) {
 		my $new_profile = Profile->new(
 			$previous_profile_ending_time,
 			$job_ending_time,
@@ -215,7 +214,7 @@ sub add_job  {
 			my $profile = shift;
 
 			# avoid including a profile that starts at $ending_time
-			return 0 if (float_equal($profile->starting_time, $ending_time));
+			return 0 if $profile->starting_time() == $ending_time;
 
 			push @profiles_to_update, $profile;
 			return 1;
@@ -244,7 +243,7 @@ sub could_start_job {
 			my $profile = shift;
 
 			# gap in the profile, can't use it to run the job
-			unless (float_equal($starting_time, $profile->starting_time())) {
+			unless ($starting_time == $profile->starting_time()) {
 				$min_processors = 0;
 				return 0;
 			}
@@ -256,8 +255,8 @@ sub could_start_job {
 			$min_processors = min($min_processors, $profile->processors()->size());
 
 			# ok to return, profile may be good for the job
-			return 0 if float_equal($starting_time, $job_ending_time) or $starting_time > $job_ending_time;
-			return 0 if $min_processors <= $job->requested_cpus();
+			return 0 if $starting_time >= $job_ending_time;
+
 			return 1;
 		});
 
@@ -281,7 +280,7 @@ sub find_first_profile {
 			my $profile = shift;
 
 			# gap in the list of profiles
-			@included_profiles = () if defined $previous_ending_time and not float_equal($previous_ending_time, $profile->starting_time());
+			@included_profiles = () if defined $previous_ending_time and $previous_ending_time != $profile->starting_time();
 
 			$previous_ending_time = $profile->ending_time();
 			push @included_profiles, $profile;
@@ -315,12 +314,12 @@ sub set_current_time {
 		sub {
 			my $profile = shift;
 
-			return 0 if float_equal($profile->starting_time(), $current_time);
+			return 0 if $profile->starting_time() == $current_time;
 
 			my $starting_time = $profile->starting_time();
 			my $ending_time = $profile->ending_time();
 
-			if (not defined $ending_time or (not float_equal($ending_time, $current_time) and $ending_time > $current_time)) {
+			if (not defined $ending_time or $ending_time > $current_time) {
 				$updated_profile = $profile;
 				return 0;
 			}
@@ -389,7 +388,7 @@ sub save_svg {
 		});
 
 	my $last_starting_time = $profiles[-1]->starting_time();
-	return if float_equal($last_starting_time, 0);
+	return unless $last_starting_time;
 
 	open(my $filehandle, '>', "$svg_filename") or die "unable to open $svg_filename";
 

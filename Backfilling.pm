@@ -11,7 +11,6 @@ use List::Util qw(min);
 use ExecutionProfile;
 use Heap;
 use Event;
-use Util qw(float_equal float_precision);
 use Platform;
 use Job;
 
@@ -40,50 +39,28 @@ sub new {
 	return $self;
 }
 
-sub new_simulation {
-	my $class = shift;
-	my $reduction_algorithm = shift;
-
-	my $self = $class->SUPER::new_simulation(@_);
-
-	$self->{execution_profile} = ExecutionProfile->new(
-		$self->{platform}->processors_number(),
-		$reduction_algorithm,
-	);
-
-	$self->{current_time} = 0;
-
-	return $self;
-}
-
 sub run {
 	my $self = shift;
 
 	$self->{reserved_jobs} = []; # jobs not started yet
 	$self->{started_jobs} = {}; # jobs that have already started
 
-	unless ($self->{uses_external_simulator}) {
-		$self->{events} = Heap->new(Event->new(SUBMISSION_EVENT, -1));
+	$self->{events} = Heap->new(Event->new(SUBMISSION_EVENT, -1));
 
-		$self->{events}->add(
-			Event->new(
-				SUBMISSION_EVENT,
-				$_->submit_time(),
-				$_
-			)
-		) for (@{$self->{trace}->jobs()});
-	}
+	$self->{events}->add(
+		Event->new(
+			SUBMISSION_EVENT,
+			$_->submit_time(),
+			$_
+		)
+	) for (@{$self->{trace}->jobs()});
 
 	$self->{run_time} = time();
 
 	while (my @events = $self->{events}->retrieve_all()) {
-		if ($self->{uses_external_simulator}) {
-			$self->{current_time} = $self->{events}->current_time();
-		} else {
-			# events coming from the heap will have the same time and type
-			my $events_timestamp = $events[0]->timestamp();
-			$self->{current_time} = $events_timestamp;
-		}
+		# events coming from the heap will have the same time and type
+		my $events_timestamp = $events[0]->timestamp();
+		$self->{current_time} = $events_timestamp;
 
 		$self->{execution_profile}->set_current_time($self->{current_time});
 
@@ -109,13 +86,7 @@ sub run {
 			print STDERR "[$self->{current_time}] before removing:\n", $self->{execution_profile}, "\n";
 			##DEBUG_END
 
-			if ($self->{uses_external_simulator}) {
-				#TODO revisit the problem that happens when current time is after job ending time
-				$self->{execution_profile}->remove_job($job, $self->{current_time});
-				$job->run_time($self->{current_time} - $job->starting_time());
-			} else {
-				$self->{execution_profile}->remove_job($job, $self->{current_time}) unless float_equal($job->requested_time(), $job->run_time());
-			}
+			$self->{execution_profile}->remove_job($job, $self->{current_time}) unless $job->requested_time() == $job->run_time();
 
 			##DEBUG_BEGIN
 			print STDERR "[$self->{current_time}] after removing:\n", $self->{execution_profile}, "\n";
@@ -129,11 +100,6 @@ sub run {
 		for my $event (@{$typed_events[SUBMISSION_EVENT]}) {
 			my $job = $event->payload();
 
-			if ($self->{uses_external_simulator}) {
-				$job->requested_time($job->requested_time() + $self->{job_delay});
-				$job->submit_time($self->{current_time});
-				$self->{trace}->add_job($job);
-			}
 
 			$self->assign_job($job);
 			die "job " . $job->job_number() . " was not assigned" unless defined $job->starting_time();
@@ -160,7 +126,7 @@ sub start_jobs {
 	my @newly_started_jobs;
 
 	for my $job (@{$self->{reserved_jobs}}) {
-		if (float_equal($job->starting_time(), $self->{current_time})) {
+		if ($job->starting_time() == $self->{current_time}) {
 			##DEBUG_BEGIN
 			print STDERR "[$self->{current_time}] job " . $job->job_number() . " starting\n";
 			##DEBUG_END
@@ -171,7 +137,7 @@ sub start_jobs {
 					$job->real_ending_time(),
 					$job
 				)
-			) unless ($self->{uses_external_simulator});
+			);
 
 			$self->{started_jobs}->{$job->job_number()} = $job;
 			push @newly_started_jobs, $job;
@@ -181,7 +147,6 @@ sub start_jobs {
 	}
 
 	$self->{reserved_jobs} = \@remaining_reserved_jobs;
-	$self->{events}->set_started_jobs(\@newly_started_jobs) if ($self->{uses_external_simulator});
 	return;
 }
 

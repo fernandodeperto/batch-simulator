@@ -9,7 +9,6 @@ use Time::HiRes qw(time);
 use Log::Log4perl qw(get_logger);
 use Data::Dumper;
 
-use EventQueue;
 use Platform;
 use Job;
 
@@ -24,32 +23,10 @@ sub new {
 		trace => $trace,
 		platform => $platform,
 		cmax => 0,
-		uses_external_simulator => 0,
 	};
 
 	die "not enough processors: ", $self->{trace}->needed_cpus() if $self->{trace}->needed_cpus() > $self->{platform}->processors_number();
 	$self->{trace}->unassign_jobs(); # make sure the trace is clean
-
-	bless $self, $class;
-	return $self;
-}
-
-sub new_simulation {
-	my $class = shift;
-	my $platform = shift;
-	my $delay = shift;
-	my $socket_file = shift;
-	my $json_file = shift;
-
-	my $self = {
-		platform => $platform,
-		job_delay => $delay,
-		cmax => 0,
-		uses_external_simulator => 1,
-	};
-
-	$self->{trace} = Trace->new();
-	$self->{events} = EventQueue->new($socket_file, $json_file);
 
 	bless $self, $class;
 	return $self;
