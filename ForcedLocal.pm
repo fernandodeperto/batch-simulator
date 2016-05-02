@@ -48,14 +48,11 @@ sub reduce {
 
 		if (($used_clusters_number == $target_clusters_number) and ($target_number > 0)) {
 			$left_processors->remove_all();
-			print STDERR "ggwp $used_clusters_number/$target_clusters_number, $target_number\n" if $job->job_number() == 3;
 			return;
 		}
 
 		last if $target_number == 0;
 	}
-
-	print STDERR "$used_clusters_number/$target_clusters_number\n" if $job->job_number() == 3;
 
 	if (@remaining_ranges) {
 		$left_processors->affect_ranges(ProcessorRange::sort_and_fuse_contiguous_ranges(\@remaining_ranges));
