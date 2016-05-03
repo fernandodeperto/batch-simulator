@@ -282,7 +282,7 @@ sub normalize_run_times {
 	my $self = shift;
 	my $factor = shift;
 
-	$_->run_time(int($_->requested_time()/$factor)) for (@{$self->{jobs}});
+	$_->run_time(max(int($_->requested_time()/$factor), $_->run_time())) for (@{$self->{jobs}});
 }
 
 sub normalize_requested_times {

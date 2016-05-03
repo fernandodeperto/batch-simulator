@@ -167,10 +167,10 @@ sub save_svg {
 		/ $self->{platform}->cluster_size());
 	my $cluster_size = 600/$self->{platform}->processors_number()
 		* $self->{platform}->cluster_size();
-	for my $cluster (1..$clusters_number) {
-		my $cluster_y = $cluster * $cluster_size;
-		print $filehandle "<line x1=\"0\" x2=\"800\" y1=\"$cluster_y\" y2=\"$cluster_y\" style=\"stroke:rgb(255,0,0);stroke-width:1\"/>\n";
-	}
+#	for my $cluster (1..$clusters_number) {
+#		my $cluster_y = $cluster * $cluster_size;
+#		print $filehandle "<line x1=\"0\" x2=\"800\" y1=\"$cluster_y\" y2=\"$cluster_y\" style=\"stroke:rgb(255,0,0);stroke-width:1\"/>\n";
+#	}
 
 	$_->svg($filehandle, $w_ratio, $h_ratio, $time, $self->{platform}) for grep {defined $_->starting_time()} (@{$self->{trace}->jobs()});
 
