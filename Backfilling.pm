@@ -93,9 +93,8 @@ sub run {
 		$self->reassign_jobs() if (@{$typed_events[JOB_COMPLETED_EVENT]});
 
 		# submission events
-		for my $event (@{$typed_events[SUBMISSION_EVENT]}) {
+		for my $event (shuffle @{$typed_events[SUBMISSION_EVENT]}) {
 			my $job = $event->payload();
-
 
 			$self->assign_job($job);
 			die "job " . $job->job_number() . " was not assigned" unless defined $job->starting_time();
