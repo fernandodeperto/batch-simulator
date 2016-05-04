@@ -6,7 +6,7 @@ use warnings;
 use Exporter qw(import);
 use Time::HiRes qw(time);
 use Data::Dumper;
-use List::Util qw(min);
+use List::Util qw(min shuffle);
 
 use Util qw($config);
 use ExecutionProfile;
@@ -95,6 +95,7 @@ sub run {
 
 		# submission events
 		@{$typed_events[SUBMISSION_EVENT]} = sort {$a->payload()->requested_time() <=> $b->payload()->requested_time()} (@{$typed_events[SUBMISSION_EVENT]}) if $config->param('backfilling.sorted_submission_events');
+		@{$typed_events[SUBMISSION_EVENT]} = shuffle @{$typed_events[SUBMISSION_EVENT]} if $config->param('backfilling.shuffle_submitted_jobs');
 
 		for my $event (@{$typed_events[SUBMISSION_EVENT]}) {
 			my $job = $event->payload();
