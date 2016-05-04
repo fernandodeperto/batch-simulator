@@ -4,7 +4,20 @@ use warnings;
 
 use Exporter qw(import);
 
-our @EXPORT_OK = qw(FALSE TRUE git_tree_dirty git_version float_equal float_precision git_tree_dirty git_version);
+our @EXPORT_OK = qw(
+	FALSE
+	TRUE
+	git_tree_dirty
+	git_version
+	float_equal
+	float_precision
+	git_tree_dirty
+	git_version
+	$config
+);
+
+
+our $config;
 
 sub git_tree_dirty {
 	my $git_path = shift;

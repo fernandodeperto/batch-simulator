@@ -4,8 +4,9 @@ use warnings;
 
 use Data::Dumper qw(Dumper);
 use Log::Log4perl qw(get_logger);
+use Config::Simple;
 
-use Util qw(git_version);
+use Util qw($config);
 use Trace;
 use Backfilling;
 use Basic;
@@ -18,6 +19,8 @@ use ForcedPlatform;
 
 my ($trace_file, $jobs_number) = @ARGV;
 
+$config = Config::Simple->new('test.conf');
+
 my @platform_levels = (1, 4, 8, 512);
 my @platform_speedup = (1.00, 10.0, 32.00);
 my $communication_level = 0.4;
@@ -29,12 +32,13 @@ $platform->set_speedup(\@platform_speedup);
 #$trace_original->remove_large_jobs($platform->processors_number());
 #my $trace = Trace->new_from_trace($trace_original, $jobs_number);
 my $trace = Trace->new_from_swf($trace_file);
+$trace->remove_large_jobs($platform->processors_number());
 #$trace->reset_jobs_numbers();
-#$trace->reset_submit_times();
+$trace->reset_submit_times();
 #$trace->fix_submit_times();
-#$trace->keep_first_jobs($jobs_number) if defined $jobs_number;
+$trace->keep_first_jobs($jobs_number) if defined $jobs_number;
 
-my $reduction_algorithm = ForcedPlatform->new($platform);
+my $reduction_algorithm = Basic->new($platform);
 
 my $schedule = Backfilling->new($reduction_algorithm, $communication_level, $platform, $trace);
 $schedule->run();

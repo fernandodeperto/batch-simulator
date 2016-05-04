@@ -8,6 +8,7 @@ use Time::HiRes qw(time);
 use Data::Dumper;
 use List::Util qw(min);
 
+use Util qw($config);
 use ExecutionProfile;
 use Heap;
 use Event;
@@ -93,9 +94,9 @@ sub run {
 		$self->reassign_jobs() if (@{$typed_events[JOB_COMPLETED_EVENT]});
 
 		# submission events
-		my @sorted_submission_events = sort {$a->payload()->requested_time() <=> $b->payload()->requested_time()} (@{$typed_events[SUBMISSION_EVENT]});
+		@{$typed_events[SUBMISSION_EVENT]} = sort {$a->payload()->requested_time() <=> $b->payload()->requested_time()} (@{$typed_events[SUBMISSION_EVENT]}) if $config->param('backfilling.sorted_submission_events');
 
-		for my $event (@sorted_submission_events) {
+		for my $event (@{$typed_events[SUBMISSION_EVENT]}) {
 			my $job = $event->payload();
 
 			$self->assign_job($job);
@@ -119,7 +120,8 @@ sub run {
 sub start_jobs {
 	my $self = shift;
 	my @remaining_reserved_jobs;
-	my @newly_started_jobs;
+
+	@{$self->{reserved_jobs}} = sort {$a->requested_time() <=> $b->requested_time()} (@{$self->{reserved_jobs}}) if $config->param('backfilling.sort_reserved_jobs');
 
 	for my $job (@{$self->{reserved_jobs}}) {
 		if ($job->starting_time() == $self->{current_time}) {
@@ -136,7 +138,6 @@ sub start_jobs {
 			);
 
 			$self->{started_jobs}->{$job->job_number()} = $job;
-			push @newly_started_jobs, $job;
 		} else {
 			push @remaining_reserved_jobs, $job;
 		}
