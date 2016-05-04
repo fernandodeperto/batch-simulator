@@ -58,14 +58,11 @@ sub run {
 	$self->{run_time} = time();
 
 	while (my @events = $self->{events}->retrieve_all()) {
-		# events coming from the heap will have the same time and type
-		my $events_timestamp = $events[0]->timestamp();
-		$self->{current_time} = $events_timestamp;
-
+		$self->{current_time} = $events[0]->timestamp();
 		$self->{execution_profile}->set_current_time($self->{current_time});
 
 		my @typed_events;
-		push @{$typed_events[$_->type()]}, $_ for @events; # 2 lists, one for each event type
+		push @{$typed_events[$_->type()]}, $_ for @events;
 
 		##DEBUG_BEGIN
 		print STDERR "[$self->{current_time}] scheduled jobs:\n", join("\n", @{$self->{reserved_jobs}}), "\n";
@@ -73,7 +70,6 @@ sub run {
 
 		# ending event
 		for my $event (@{$typed_events[JOB_COMPLETED_EVENT]}) {
-
 			my $job = $event->payload();
 
 			##DEBUG_BEGIN
@@ -114,7 +110,6 @@ sub run {
 
 	$self->{execution_profile}->free_profiles();
 
-	# time measure
 	$self->{run_time} = time() - $self->{run_time};
 
 	return;
