@@ -12,7 +12,7 @@ use Data::Dumper;
 use Platform;
 use Job;
 
-# Constructors 
+# Constructors
 
 sub new {
 	my $class = shift;

@@ -94,7 +94,7 @@ sub run {
 		$self->reassign_jobs() if (@{$typed_events[JOB_COMPLETED_EVENT]});
 
 		# submission events
-		@{$typed_events[SUBMISSION_EVENT]} = sort {$a->payload()->requested_time() <=> $b->payload()->requested_time()} (@{$typed_events[SUBMISSION_EVENT]}) if $config->param('backfilling.sorted_submission_events');
+		@{$typed_events[SUBMISSION_EVENT]} = sort {$a->payload()->requested_time() <=> $b->payload()->requested_time()} (@{$typed_events[SUBMISSION_EVENT]}) if $config->param('backfilling.sort_submission_events');
 		@{$typed_events[SUBMISSION_EVENT]} = shuffle @{$typed_events[SUBMISSION_EVENT]} if $config->param('backfilling.shuffle_submitted_jobs');
 
 		for my $event (@{$typed_events[SUBMISSION_EVENT]}) {
