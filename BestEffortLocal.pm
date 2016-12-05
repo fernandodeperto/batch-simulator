@@ -3,11 +3,10 @@ use parent 'Basic';
 use strict;
 use warnings;
 
-use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
-use ProcessorRange;
-
 use Data::Dumper;
 use List::Util qw(min sum);
+
+use ProcessorRange;
 
 sub new {
 	my $class = shift;

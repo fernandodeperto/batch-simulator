@@ -3,12 +3,11 @@ use parent 'BestEffortPlatform';
 use strict;
 use warnings;
 
-use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
-use ProcessorRange;
-use BestEffortPlatform qw(DEFAULT SMALLEST_FIRST BIGGEST_FIRST);
-
 use Data::Dumper;
 use Switch;
+
+use ProcessorRange;
+use BestEffortPlatform qw(DEFAULT SMALLEST_FIRST BIGGEST_FIRST);
 
 sub new {
 	my $class = shift;

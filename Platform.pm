@@ -9,6 +9,7 @@ use XML::Smart;
 use Carp;
 
 use Tree;
+
 use ProcessorRange;
 
 # default power, latency and bandwidth values

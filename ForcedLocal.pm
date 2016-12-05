@@ -3,12 +3,11 @@ use parent 'BestEffortLocal';
 use strict;
 use warnings;
 
-use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
-use ProcessorRange;
-
 use Data::Dumper;
 use POSIX qw(ceil);
 use List::Util qw(min sum);
+
+use ProcessorRange;
 
 sub new {
 	my $class = shift;

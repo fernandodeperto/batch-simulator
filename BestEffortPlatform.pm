@@ -3,11 +3,10 @@ use parent 'Basic';
 use strict;
 use warnings;
 
-use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
-use ProcessorRange;
-
 use Data::Dumper;
 use Switch;
+
+use ProcessorRange;
 
 require Exporter;
 our @ISA = qw(Exporter);

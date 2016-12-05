@@ -29,6 +29,8 @@ sub new {
 
 	my $self = $class->SUPER::new(@_);
 
+	die unless defined $config;
+
 	$self->{execution_profile} = ExecutionProfile->new(
 		$self->{platform}->processors_number(),
 		$reduction_algorithm,
@@ -42,6 +44,8 @@ sub new {
 
 sub run {
 	my $self = shift;
+
+	die unless defined $config;
 
 	$self->{reserved_jobs} = []; # jobs not started yet
 	$self->{started_jobs} = {}; # jobs that have already started
