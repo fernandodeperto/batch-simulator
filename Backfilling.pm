@@ -24,6 +24,8 @@ use constant {
 
 sub new {
 	my $class = shift;
+
+	# Additional parameters
 	my $reduction_algorithm = shift;
 	my $communication_level = shift;
 

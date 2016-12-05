@@ -3,7 +3,6 @@ use strict;
 use warnings;
 
 use Data::Dumper qw(Dumper);
-use Log::Log4perl qw(get_logger);
 use Config::Simple;
 
 use Util qw($config);

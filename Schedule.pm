@@ -6,7 +6,6 @@ use warnings;
 
 use List::Util qw(max sum);
 use Time::HiRes qw(time);
-use Log::Log4perl qw(get_logger);
 use Data::Dumper;
 
 use Platform;

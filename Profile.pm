@@ -5,7 +5,6 @@ use warnings;
 
 use POSIX;
 use Scalar::Util qw(blessed);
-use Log::Log4perl qw(get_logger);
 use Data::Dumper qw(Dumper);
 use Carp;
 use List::Util qw(min);

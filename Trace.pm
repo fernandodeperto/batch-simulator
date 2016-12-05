@@ -6,6 +6,7 @@ use List::Util qw(max reduce sum min);
 use List::MoreUtils qw(natatime);
 use Storable qw(dclone);
 use POSIX qw(ceil floor);
+use Clone qw(clone);
 
 use Job;
 
@@ -195,7 +196,44 @@ sub copy {
 	return $self;
 }
 
-sub reset_submit_times {
+sub copy_random_block {
+	my ($class, $trace, $jobs_number) = @_;
+
+	my $starting_point = int(rand(scalar @{$trace->{jobs}} - $jobs_number));
+	my @chosen_jobs = map {clone $trace->{jobs}->[$_]} ($starting_point..($starting_point + $jobs_number - 1));
+
+	my $self = {
+		jobs => [sort {$a->submit_time() <=> $b->submit_time()} @chosen_jobs],
+		submitted_jobs => [],
+	};
+
+	bless $self, $class;
+	return $self;
+}
+
+sub copy_random_time_period {
+	my ($class, $trace, $block_size) = @_;
+
+	my $first_submit_time = min map {$_->submit_time()} @{$trace->{jobs}};
+	my $last_submit_time = max map {$_->submit_time()} @{$trace->{jobs}};
+
+	my @new_jobs;
+
+	do {
+		my $starting_point = $first_submit_time + int rand($last_submit_time - $block_size - $first_submit_time);
+		@new_jobs = map {clone $_} grep {$_->submit_time() >= $starting_point and $_->submit_time() < $starting_point + $block_size} @{$trace->{jobs}};
+	} until @new_jobs;
+
+	my $self = {
+		jobs => [sort {$a->submit_time() <=> $b->submit_time()} @new_jobs],
+		submitted_jobs => [],
+	};
+
+	bless $self, $class;
+	return $self;
+}
+
+sub remove_submit_times {
 	my $self = shift;
 
 	$_->submit_time(0) for (@{$self->{jobs}});
@@ -211,7 +249,7 @@ sub reset_jobs_numbers {
 	return;
 }
 
-sub write_to_file {
+sub write {
 	my $self = shift;
 	my $trace_file_name = shift;
 
