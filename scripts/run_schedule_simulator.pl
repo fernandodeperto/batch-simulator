@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 use Data::Dumper qw(Dumper);
-use Log::Log4perl qw(get_logger);
+
 use threads;
 
 use Trace;
@@ -17,9 +17,6 @@ use BestEffortPlatform;
 use ForcedPlatform;
 
 my ($trace_file) = @ARGV;
-
-Log::Log4perl::init('log4perl.conf');
-my $logger = get_logger();
 
 my @platform_levels = (1, 2, 4, 8, 64);
 my $cluster_size = $platform_levels[$#platform_levels]/$platform_levels[$#platform_levels - 1];
@@ -56,10 +53,6 @@ my @results = (
 );
 
 print STDOUT join(' ', @results);
-
-sub get_log_file {
-	return 'log/run_schedule_simulator.log';
-}
 
 sub run_batsim {
 	my $batsim_result =  `$batsim -s $socket_file -m'master_host0' -- $platform_file $json_file 2>/dev/null`;

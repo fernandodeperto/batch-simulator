@@ -31,8 +31,6 @@ sub new {
 
 	my $self = $class->SUPER::new(@_);
 
-	die unless defined $config;
-
 	$self->{execution_profile} = ExecutionProfile->new(
 		$self->{platform}->processors_number(),
 		$reduction_algorithm,

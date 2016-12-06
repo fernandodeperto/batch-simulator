@@ -530,9 +530,10 @@ sub job_contiguity {
 
 	my @ranges = $assigned_processors->pairs();
 
-	return 1 if (@ranges == 1);
-	return 1 if (@ranges == 2 and $ranges[0]->[0] == 0
-	and $ranges[1]->[1] == $self->processors_number()- 1);
+	return 1 if (scalar @ranges == 1);
+
+	return 1 if (scalar @ranges == 2 and $ranges[0]->[0] == 0
+	and $ranges[1]->[1] == $self->processors_number() - 1);
 
 	return 0;
 }
@@ -541,12 +542,12 @@ sub job_contiguity_factor {
 	my $self = shift;
 	my $assigned_processors = shift;
 
-	my $ranges = $assigned_processors->pairs();
+	my @ranges = $assigned_processors->pairs();
 
-	return 1 if (@{$ranges} == 2 and $ranges->[0]->[0] == 0
-	and $ranges->[1]->[1] == $self->processors_number()- 1);
+	return 1 if (scalar @ranges == 2 and $ranges[0]->[0] == 0
+	and $ranges[1]->[1] == $self->processors_number() - 1);
 
-	return @{$ranges};
+	return scalar @ranges;
 }
 
 sub job_locality {

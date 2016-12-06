@@ -7,7 +7,9 @@ use warnings;
 use List::Util qw(max sum);
 use Time::HiRes qw(time);
 use Data::Dumper;
+use POSIX qw(pow);
 
+use Util qw($config);
 use Platform;
 use Job;
 
@@ -74,9 +76,14 @@ sub mean_flow_time {
 	return $self->sum_flow_time() / @{$self->{trace}->jobs()};
 }
 
+sub sum_stretch {
+	my $self = shift;
+	return sum map {$_->bounded_stretch()} @{$self->{trace}->jobs()};
+}
+
 sub max_stretch {
 	my $self = shift;
-	return max map {$_->stretch()} @{$self->{trace}->jobs()};
+	return max map {$_->bounded_stretch()} @{$self->{trace}->jobs()};
 }
 
 sub mean_stretch {
@@ -114,9 +121,32 @@ sub stretch_with_cpus_log {
 	return sum map {$_->bounded_stretch_with_cpus_log(10)} (@{$self->{trace}->jobs()});
 }
 
+sub flow_time_pnorm {
+	my $self = shift;
+
+	my $pnorm = $config->param('parameters.pnorm');
+
+	return pow((sum map {defined $_->flow_time() ? pow($_->flow_time(), $pnorm) : 0} @{$self->{trace}->jobs()}), 1/$pnorm);
+}
+
+sub stretch_pnorm {
+	my $self = shift;
+
+	my $pnorm = $config->param('parameters.pnorm');
+
+	return pow((sum map {defined $_->bounded_stretch() ? pow($_->bounded_stretch(), $pnorm) : 0} @{$self->{trace}->jobs()}), 1/$pnorm);
+}
+
 sub contiguous_jobs_number {
 	my $self = shift;
 	return sum map {$self->{platform}->job_contiguity($_->assigned_processors())} (@{$self->{trace}->jobs()});
+}
+
+sub contiguity_factor {
+	my $self = shift;
+
+	my $total_contiguity_factor = sum map {$self->{platform}->job_contiguity_factor($_->assigned_processors())} (@{$self->{trace}->jobs()});
+	return $total_contiguity_factor/scalar @{$self->{trace}->jobs()};
 }
 
 sub local_jobs_number {
@@ -128,7 +158,7 @@ sub locality_factor {
 	my $self = shift;
 
 	my $total_locality_factor = sum map {$self->{platform}->job_locality_factor($_->assigned_processors())} (@{$self->{trace}->jobs()});
-	return $total_locality_factor/@{$self->{trace}->jobs()};
+	return $total_locality_factor/scalar @{$self->{trace}->jobs()};
 }
 
 sub platform_level_factor {

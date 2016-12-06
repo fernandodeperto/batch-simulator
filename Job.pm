@@ -8,6 +8,8 @@ use POSIX;
 use Carp;
 use Data::Dumper;
 
+use Util qw($config);
+
 use overload '""' => \&stringification;
 
 my @svg_colors = (
@@ -224,7 +226,7 @@ sub flow_time {
 
 sub bounded_stretch {
 	my $self = shift;
-	my $bound = shift;
+	my $bound = $config->param('parameters.stretch_bound');
 
 	return max($self->flow_time()/max($self->{run_time}, $bound), 1);
 }

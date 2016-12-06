@@ -5,7 +5,6 @@ use strict;
 
 use Data::Dumper;
 use Scalar::Util qw(refaddr);
-use Log::Log4perl qw(get_logger);
 
 use constant {
 	LEFT => 0,
