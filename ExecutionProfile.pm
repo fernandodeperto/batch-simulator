@@ -97,7 +97,7 @@ sub remove_job {
 	my $job_ending_time = $job->submitted_ending_time();
 
 	##DEBUG_BEGIN
-	print STDERR "start $starting_time end $job_ending_time\n";
+	#print STDERR "start $starting_time end $job_ending_time\n";
 	##DEBUG_END
 
 	my @impacted_profiles;
@@ -112,7 +112,7 @@ sub remove_job {
 	Profile::set_comparison_function('default');
 
 	##DEBUG_BEGIN
-	print STDERR "impacted profiles:\n", join("\n", @impacted_profiles), "\n";
+	#print STDERR "impacted profiles:\n", join("\n", @impacted_profiles), "\n";
 	##DEBUG_END
 
 	unless (@impacted_profiles) {

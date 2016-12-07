@@ -45,8 +45,6 @@ sub new {
 sub run {
 	my $self = shift;
 
-	die unless defined $config;
-
 	$self->{reserved_jobs} = []; # jobs not started yet
 	$self->{started_jobs} = {}; # jobs that have already started
 
@@ -70,7 +68,7 @@ sub run {
 		push @{$typed_events[$_->type()]}, $_ for @events;
 
 		##DEBUG_BEGIN
-		print STDERR "[$self->{current_time}] scheduled jobs:\n", join("\n", @{$self->{reserved_jobs}}), "\n";
+		#print STDERR "[$self->{current_time}] scheduled jobs:\n", join("\n", @{$self->{reserved_jobs}}), "\n";
 		##DEBUG_END
 
 		# ending event
@@ -84,13 +82,13 @@ sub run {
 			delete $self->{started_jobs}->{$job->job_number()};
 
 			##DEBUG_BEGIN
-			print STDERR "[$self->{current_time}] before removing:\n", $self->{execution_profile}, "\n";
+			#print STDERR "[$self->{current_time}] before removing:\n", $self->{execution_profile}, "\n";
 			##DEBUG_END
 
 			$self->{execution_profile}->remove_job($job, $self->{current_time}) unless $job->requested_time() == $job->run_time();
 
 			##DEBUG_BEGIN
-			print STDERR "[$self->{current_time}] after removing:\n", $self->{execution_profile}, "\n";
+			#print STDERR "[$self->{current_time}] after removing:\n", $self->{execution_profile}, "\n";
 			##DEBUG_END
 		}
 
@@ -98,7 +96,7 @@ sub run {
 		$self->reassign_jobs() if (@{$typed_events[JOB_COMPLETED_EVENT]});
 
 		# submission events
-		@{$typed_events[SUBMISSION_EVENT]} = sort {$a->payload()->requested_time() <=> $b->payload()->requested_time()} (@{$typed_events[SUBMISSION_EVENT]}) if $config->param('backfilling.sort_submission_events');
+		@{$typed_events[SUBMISSION_EVENT]} = sort {$a->payload()->requested_time() <=> $b->payload()->requested_time()} (@{$typed_events[SUBMISSION_EVENT]}) if $config->param('backfilling.sort_sumitted_jobs');
 		@{$typed_events[SUBMISSION_EVENT]} = shuffle @{$typed_events[SUBMISSION_EVENT]} if $config->param('backfilling.shuffle_submitted_jobs');
 
 		for my $event (@{$typed_events[SUBMISSION_EVENT]}) {

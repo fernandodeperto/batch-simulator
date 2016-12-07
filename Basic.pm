@@ -28,13 +28,15 @@ sub reduce {
 	$left_processors->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
+
 			my $taking = $target_number;
 			my $available_processors = $end + 1 - $start;
-
+			
 			$taking = $available_processors if ($available_processors < $target_number);
 
 			push @remaining_ranges, [$start, $start + $taking - 1];
 			$target_number -= $taking;
+
 			return ($target_number != 0);
 		}
 	);
