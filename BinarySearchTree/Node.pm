@@ -198,11 +198,8 @@ sub nodes_loop {
 sub children {
 	my $self = shift;
 	my @children;
-	for my $direction(LEFT, RIGHT) {
-		next unless defined $self->{children}->[$direction];
-		push @children, $self->{children}->[$direction];
-	}
-	return @children;
+
+	return map {defined $_ ? $_ : ()} @{$self->{children}};
 }
 
 # Return the direction for a key

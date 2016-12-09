@@ -16,9 +16,8 @@ use Platform;
 use Job;
 
 use constant {
-	SUBMISSION_EVENT => 0,
-	JOB_START_EVENT => 1,
-	JOB_COMPLETION_EVENT => 2,
+	JOB_COMPLETED_EVENT => 0,
+	SUBMISSION_EVENT => 1
 };
 
 sub new {
@@ -47,7 +46,7 @@ sub run {
 	$self->{reserved_jobs} = []; # jobs not started yet
 	$self->{started_jobs} = {}; # jobs that have already started
 
-	$self->{events} = Heap->new(Event->new(-1, -1));
+	$self->{events} = Heap->new(Event->new(SUBMISSION_EVENT, -1));
 
 	$self->{events}->add(
 		Event->new(
@@ -66,17 +65,15 @@ sub run {
 		my @typed_events;
 		push @{$typed_events[$_->type()]}, $_ for @events;
 
-		for my $event (@{$typed_events[JOB_COMPLETION_EVENT]}) {
+		for my $event (@{$typed_events[JOB_COMPLETED_EVENT]}) {
 			my $job = $event->payload();
 
 			$self->{execution_profile}->remove_job($job, $self->{current_time}) unless $job->requested_time() == $job->run_time();
 		}
 
 		# reassign all reserved jobs if any job finished
-		if ($config->param('backfilling.reassign_jobs') and scalar @{$typed_events[JOB_COMPLETION_EVENT]}) {
-			my $latest_ending_time = max map {$_->payload()->submitted_ending_time()} @{$typed_events[JOB_COMPLETION_EVENT]};
-			$self->reassign_jobs($latest_ending_time);
-		}
+		my $latest_ending_time = max map {$_->payload()->submitted_ending_time()} @{$typed_events[JOB_COMPLETED_EVENT]};
+		$self->reassign_jobs($latest_ending_time) if (@{$typed_events[JOB_COMPLETED_EVENT]});
 
 		# submission events
 		@{$typed_events[SUBMISSION_EVENT]} = sort {$a->payload()->requested_time() <=> $b->payload()->requested_time()} (@{$typed_events[SUBMISSION_EVENT]}) if $config->param('backfilling.sort_sumitted_jobs');
@@ -87,23 +84,14 @@ sub run {
 
 			$self->assign_job($job);
 			die "job " . $job->job_number() . " was not assigned" unless defined $job->starting_time();
-
 			push @{$self->{reserved_jobs}}, $job;
-
-			$self->{events}->add(
-				Event->new(
-					JOB_START_EVENT,
-					$job->starting_time(),
-					$job
-				)
-			);
-
 		}
 
 		$self->start_jobs();
 	}
 
 	# all jobs should be scheduled and started
+	#die 'there are still jobs in the reserved queue: ' . join("\n", @{$self->{reserved_jobs}}) if @{$self->{reserved_jobs}};
 	die 'there are still jobs in the reserved queue' if @{$self->{reserved_jobs}};
 
 	$self->{execution_profile}->free_profiles();
@@ -123,7 +111,7 @@ sub start_jobs {
 		if ($job->starting_time() == $self->{current_time}) {
 			$self->{events}->add(
 				Event->new(
-					JOB_COMPLETION_EVENT,
+					JOB_COMPLETED_EVENT,
 					$job->real_ending_time(),
 					$job
 				)
@@ -142,32 +130,36 @@ sub reassign_jobs {
 	my $latest_ending_time = shift;
 
 	for my $job (@{$self->{reserved_jobs}}) {
-		next unless $self->{execution_profile}->available_processors($self->{current_time}) >= $job->requested_cpus();
+		if ($self->{execution_profile}->available_processors($self->{current_time}) >= $job->requested_cpus()) {
+			my $job_starting_time = $job->starting_time();
+			my $assigned_processors = $job->assigned_processors();
 
-		my $job_starting_time = $job->starting_time();
-		my $assigned_processors = $job->assigned_processors();
+			$self->{execution_profile}->remove_job($job, $self->{current_time}) if $config->param('backfilling.reassign_remove_jobs') and
+				(!$config->param('backfilling.reassign_use_latest_ending_time') or
+				$job->starting_time() <= $latest_ending_time);
 
-		$self->{execution_profile}->remove_job($job, $self->{current_time}) if $config->param('backfilling.reassign_remove_jobs') and
-			(!$config->param('backfilling.reassign_use_latest_ending_time') or $job->starting_time() <= $latest_ending_time);
+			unless ($self->{execution_profile}->could_start_job($job, $self->{current_time})) {
+				$self->{execution_profile}->add_job($job_starting_time, $job) if $config->param('backfilling.reassign_remove_jobs') and
+					(!$config->param('backfilling.reassign_use_latest_ending_time') or
+					$job->starting_time() <= $latest_ending_time);
+				next;
+			}
 
-		unless ($self->{execution_profile}->could_start_job($job, $self->{current_time})) {
-			$self->{execution_profile}->add_job($job_starting_time, $job) if $config->param('backfilling.reassign_remove_jobs') and
-				(!$config->param('backfilling.reassign_use_latest_ending_time') or $job->starting_time() <= $latest_ending_time);
-			next;
+			my $new_processors = $self->{execution_profile}->get_free_processors($job, $self->{current_time});
+
+			unless (defined $new_processors) {
+				$self->{execution_profile}->add_job($job_starting_time, $job) if $config->param('backfilling.reassign_remove_jobs') and
+					(!$config->param('backfilling.reassign_use_latest_ending_time') or
+					$job->starting_time() <= $latest_ending_time);
+				next;
+			}
+
+			$job->assign($self->{current_time}, $new_processors);
+			$self->{execution_profile}->remove_job($job, $self->{current_time}) unless $config->param('backfilling.reassign_remove_jobs') and
+				(!$config->param('backfilling.reassign_use_latest_ending_time') or
+				$job->starting_time() <= $latest_ending_time);
+			$self->{execution_profile}->add_job($self->{current_time}, $job);
 		}
-
-		my $new_processors = $self->{execution_profile}->get_free_processors($job, $self->{current_time});
-
-		unless (defined $new_processors) {
-			$self->{execution_profile}->add_job($job_starting_time, $job) if $config->param('backfilling.reassign_remove_jobs') and
-				(!$config->param('backfilling.reassign_use_latest_ending_time') or $job->starting_time() <= $latest_ending_time);
-			next;
-		}
-
-		$job->assign($self->{current_time}, $new_processors);
-		$self->{execution_profile}->remove_job($job, $self->{current_time}) if $config->param('backfilling.reassign_remove_jobs') and
-			(!$config->param('backfilling.reassign_use_latest_ending_time') or $job->starting_time() <= $latest_ending_time);
-		$self->{execution_profile}->add_job($self->{current_time}, $job);
 	}
 
 	return;
