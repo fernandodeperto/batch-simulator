@@ -485,6 +485,22 @@ sub job_level_distance {
 	return 1;
 }
 
+sub job_minimum_level_distance {
+	my $self = shift;
+	my $requested_cpus = shift;
+
+	my $last_level = $#{$self->{levels}};
+
+	my $minimum_level_distance;
+	for my $level (reverse(0..($last_level - 1))) {
+		my $cpus_per_level = $self->{levels}->[$last_level] / $self->{levels}->[$level];
+
+		if ($cpus_per_level >= $requested_cpus) {
+			return $last_level - $level;
+		}
+	}
+}
+
 sub job_relative_level_distance {
 	my $self = shift;
 	my $assigned_processors = shift;

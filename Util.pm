@@ -16,7 +16,6 @@ our @EXPORT_OK = qw(
 	$config
 );
 
-
 our $config;
 
 sub git_tree_dirty {
