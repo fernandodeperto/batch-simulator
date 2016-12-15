@@ -179,7 +179,7 @@ sub assign_job {
 		my $speedup = $self->{platform}->speedup($job_platform_level - 1) /
 			$self->{platform}->speedup($job_minimum_level - 1);
 
-		if ($speedup > 1) {
+		if ($job_platform_level != $job_minimum_level) {
 			my $new_job_run_time = $job->run_time() +
 				int($job->run_time() * $self->{communication_level} * $speedup);
 
