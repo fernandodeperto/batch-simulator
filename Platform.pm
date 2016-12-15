@@ -263,9 +263,7 @@ sub build_structure {
 	return \@cpus_structure;
 }
 
-# Speedup generation
-
-sub generate_speedup {
+sub generate_slowdown {
 	my $self = shift;
 	my $benchmark = shift;
 	my $platform_file = shift;
@@ -301,16 +299,16 @@ sub generate_speedup {
 
 	my $base_runtime = $results[0];
 	@results = map {$_/$base_runtime} (@results);
-	@{$self->{speedup}} = @results;
+	@{$self->{slowdown}} = @results;
 
 	return;
 }
 
-sub set_speedup_from_lantencies {
+sub set_slowdown_from_lantencies {
 	my $self = shift;
 	my $latencies = shift;
 
-	@{$self->{speedup}} = reverse map {$_/$latencies->[-1]} (@{$latencies});
+	@{$self->{slowdown}} = reverse map {$_/$latencies->[-1]} (@{$latencies});
 	return;
 }
 
@@ -323,22 +321,22 @@ sub save_hosts_file {
 	close($file);
 }
 
-sub set_speedup {
+sub set_slowdown {
 	my $self = shift;
-	my $platform_speedup = shift;
+	my $platform_slowdown = shift;
 
-	$self->{speedup} = [@{$platform_speedup}];
+	$self->{slowdown} = [@{$platform_slowdown}];
 	return;
 }
 
-sub speedup {
+sub slowdown {
 	my $self = shift;
 	my $level = shift;
 
-	return unless defined $self->{speedup};
+	return unless defined $self->{slowdown};
 
-	return $self->{speedup}->[$level] if defined $level;
-	return $self->{speedup};
+	return $self->{slowdown}->[$level] if defined $level;
+	return $self->{slowdown};
 }
 
 # Platform XML

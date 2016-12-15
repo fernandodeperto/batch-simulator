@@ -173,15 +173,16 @@ sub assign_job {
 	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile($job);
 
 	# here we can decide the new run time based on the platform level
-	if (defined $self->{platform}->speedup()) {
+	if (defined $self->{platform}->slowdown()) {
 		my $job_platform_level = $self->{platform}->job_level_distance($chosen_processors);
 		my $job_minimum_level = $self->{platform}->job_minimum_level_distance($job->requested_cpus());
-		my $speedup = $self->{platform}->speedup($job_platform_level - 1) /
-			$self->{platform}->speedup($job_minimum_level - 1);
 
 		if ($job_platform_level != $job_minimum_level) {
+			my $slowdown = $self->{platform}->slowdown($job_platform_level - 1) /
+				$self->{platform}->slowdown($job_minimum_level - 1);
+
 			my $new_job_run_time = $job->run_time() +
-				int($job->run_time() * $self->{communication_level} * $speedup);
+				int($job->run_time() * $self->{communication_level} * $slowdown);
 
 			if ($new_job_run_time > $job->requested_time()) {
 				$job->run_time($job->requested_time());
