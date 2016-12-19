@@ -7,6 +7,7 @@ use Data::Dumper;
 use Switch;
 
 use ProcessorRange;
+use Platform;
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -61,8 +62,10 @@ sub choose_cpus {
 
 	# Find the first block with enough CPUs for the job
 	my $chosen_block;
+
 	for my $structure_level (@suitable_levels) {
 		my @sorted_blocks;
+
 		switch ($self->{mode}) {
 			case SMALLEST_FIRST {
 				@sorted_blocks = sort {$a->{total_size} <=> $b->{total_size}} (@{$structure_level});

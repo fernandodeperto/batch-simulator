@@ -181,8 +181,9 @@ sub assign_job {
 			my $slowdown = $self->{platform}->slowdown($job_platform_level - 1) /
 				$self->{platform}->slowdown($job_minimum_level - 1);
 
-			my $new_job_run_time = $job->run_time() +
-				int($job->run_time() * $self->{communication_level} * $slowdown);
+			my $new_job_run_time = int((1 - $self->{communication_level}) * $job->run_time() +
+				$slowdown * $self->{communication_level} * $job->run_time());
+				
 
 			if ($new_job_run_time > $job->requested_time()) {
 				$job->run_time($job->requested_time());
