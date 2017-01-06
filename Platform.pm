@@ -9,13 +9,7 @@ use XML::Smart;
 use Carp;
 
 use Tree;
-
 use ProcessorRange;
-
-# default power, latency and bandwidth values
-use constant CLUSTER_POWER => "23.492E9f";
-use constant CLUSTER_BANDWIDTH => "1.25E9Bps";
-use constant LINK_BANDWIDTH => "1.25E9Bps";
 
 # Constructors and helper functions
 
@@ -270,16 +264,11 @@ sub generate_slowdown {
 	my $replay_script = shift;
 
 	my $hosts_file = '/tmp/hosts';
-
-	unless (defined $platform_file) {
-		$platform_file = '/tmp/platform';
-		$self->build_platform_xml();
-		$self->save_platform_xml($platform_file);
-	}
+	my $cpus_number = 2;
 
 	my $last_level = $#{$self->{levels}};
+
 	my @hosts_configs = reverse map {[0, int($self->{levels}->[-1]/$self->{levels}->[$_])]} (1..$last_level);
-	my $cpus_number = 2;
 
 	my @results;
 
@@ -336,16 +325,19 @@ sub slowdown {
 	return unless defined $self->{slowdown};
 
 	return $self->{slowdown}->[$level] if defined $level;
-	return $self->{slowdown};
+	return @{$self->{slowdown}};
 }
 
 # Platform XML
 
 sub build_platform_xml {
 	my $self = shift;
+	my $power = shift;
+	my $bandwidths = shift;
 	my $latencies = shift;
 
 	my @platform_parts = @{$self->{levels}};
+
 	my $xml = XML::Smart->new();
 
 	$xml->{platform} = {version => 4};
@@ -366,17 +358,18 @@ sub build_platform_xml {
 	push @{$xml->{platform}{AS}{AS}{router}}, {id => "R-0-0"};
 
 	# build levels
-	for my $level (1..($#platform_parts - 1)) {
+	for my $level (1..($#platform_parts - 2)) {
 		my $nodes_number = $platform_parts[$level];
 
 		for my $node_number (0..($nodes_number - 1)) {
 			push @{$xml->{platform}{AS}{AS}{router}}, {id => "R-$level-$node_number"};
 
 			my $father_node = int $node_number/($platform_parts[$level]/$platform_parts[$level - 1]);
+
 			push @{$xml->{platform}{AS}{AS}{link}}, {
 				id => "L-$level-$node_number",
-				bandwidth => LINK_BANDWIDTH,
-				latency => $latencies->[$level -1],
+				bandwidth => $bandwidths->[$level - 1],
+				latency => $latencies->[$level - 1],
 			};
 
 			push @{$xml->{platform}{AS}{AS}{route}}, {
@@ -387,56 +380,32 @@ sub build_platform_xml {
 		}
 	}
 
-	# master host
-	push @{$xml->{platform}{AS}{cluster}}, {
-			id => 'C-MH',
-			prefix => 'master_host',
-			suffix => '',
-			radical => '0-0',
-			speed => CLUSTER_POWER,
-			bw => CLUSTER_BANDWIDTH,
-			lat => $latencies->[-1],
-			router_id => 'R-MH',
-	};
-
-	push @{$xml->{platform}{AS}{link}}, {
-		id => 'L-MH',
-		bandwidth => LINK_BANDWIDTH,
-		latency => $latencies->[-1],
-	};
-
-	push @{$xml->{platform}{AS}{ASroute}}, {
-		src => 'C-MH',
-		gw_src => 'R-MH',
-		dst => 'AS_Tree',
-		gw_dst => 'R-0-0',
-		link_ctn => {id => 'L-MH'},
-	};
-
 	# clusters
-	for my $cluster (0..($platform_parts[$#platform_parts - 1] - 1)) {
+	for my $cluster (0..($platform_parts[-2] - 1)) {
 		push @{$xml->{platform}{AS}{cluster}}, {
 			id => "C-$cluster",
 			prefix => "",
 			suffix => "",
 			radical => ($cluster * $self->cluster_size()) . '-' . (($cluster + 1) * $self->cluster_size() - 1),
-			speed => CLUSTER_POWER,
-			bw => CLUSTER_BANDWIDTH,
+			speed => $power,
+			bw => $bandwidths->[-1],
 			lat => $latencies->[-1],
 			router_id => "R-$cluster",
 		};
 
 		push @{$xml->{platform}{AS}{link}}, {
 			id => "L-$cluster",
-			bandwidth => LINK_BANDWIDTH,
-			latency => $latencies->[-1],
+			bandwidth => $bandwidths->[-2],
+			latency => $latencies->[-2],
 		};
+
+		my $father_node = int $cluster/($platform_parts[-2]/$platform_parts[-3]);
 
 		push @{$xml->{platform}{AS}{ASroute}}, {
 			src => "C-$cluster",
 			gw_src => "R-$cluster",
 			dst => "AS_Tree",
-			gw_dst => 'R-' . ($#platform_parts - 1) . "-$cluster",
+			gw_dst => 'R-' . ($#platform_parts - 2) . "-$father_node",
 			link_ctn => {id => "L-$cluster"},
 		}
 	}
