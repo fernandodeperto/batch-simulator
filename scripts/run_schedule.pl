@@ -16,28 +16,27 @@ use ForcedLocal;
 use BestEffortPlatform qw(SMALLEST_FIRST BIGGEST_FIRST);
 use ForcedPlatform;
 
-my ($trace_file, $jobs_number) = @ARGV;
-
 $config = Config::Simple->new('test.conf');
 
-my @platform_levels = (1, 4, 8, 512);
-my @platform_speedup = (1.00, 10.0, 32.00);
-my $communication_level = 0.4;
+my $platform_name = $config->param('parameters.platform_name');
+my @platform_levels = $config->param("$platform_name.platform_levels");
+my @platform_slowdown = $config->param("$platform_name.platform_slowdown");
 
 my $platform = Platform->new(\@platform_levels);
-$platform->set_speedup(\@platform_speedup);
+$platform->set_slowdown(\@platform_slowdown);
 
-#my $trace_original = Trace->new_from_swf($trace_file);
-#$trace_original->remove_large_jobs($platform->processors_number());
-#my $trace = Trace->new_from_trace($trace_original, $jobs_number);
-my $trace = Trace->new_from_swf($trace_file);
+my $traces_path = $config->param('paths.traces');
+my $swf_filename = $config->param("$platform_name.swf_file");
+my $jobs_number = $config->param('parameters.jobs_number');
+my $communication_level = $config->param('parameters.communication_level');
+
+my $trace = Trace->new_from_swf("$traces_path/$swf_filename");
 $trace->remove_large_jobs($platform->processors_number());
-#$trace->reset_jobs_numbers();
-$trace->reset_submit_times();
-#$trace->fix_submit_times();
+$trace->reset_jobs_numbers();
+$trace->fix_submit_times();
 $trace->keep_first_jobs($jobs_number) if defined $jobs_number;
 
-my $reduction_algorithm = Basic->new($platform);
+my $reduction_algorithm = BestEffortPlatform->new($platform);
 
 my $schedule = Backfilling->new($reduction_algorithm, $communication_level, $platform, $trace);
 $schedule->run();
@@ -54,8 +53,3 @@ my @results = (
 
 print STDOUT join(' ', @results) . "\n";
 
-$schedule->save_svg('svg/run_schedule.svg');
-
-sub get_log_file {
-	return 'log/run_schedule.log';
-}
