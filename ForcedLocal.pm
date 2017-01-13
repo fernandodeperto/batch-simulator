@@ -7,29 +7,27 @@ use Data::Dumper;
 use POSIX qw(ceil);
 use List::Util qw(min sum);
 
-use ProcessorRange;
-
 sub new {
-	my $class = shift;
+	my ($class, @remaining_parameters) = @_;
 
-	my $self = $class->SUPER::new(@_);
+	my $self = $class->SUPER::new(@remaining_parameters);
 
 	bless $self, $class;
 	return $self;
 }
 
 sub reduce {
-	my $self = shift;
-	my $job = shift;
-	my $left_processors = shift;
-
-	my $target_number = $job->requested_cpus();
+	my ($self, $job, $left_processors) = @_;
 
 	my @remaining_ranges;
+
+	my $target_number = $job->requested_cpus();
 	my $used_clusters_number = 0;
 	my $current_cluster;
+
 	my @clusters = $self->{platform}->job_processors_in_clusters($left_processors);
 	my @sorted_clusters = sort {BestEffortLocal::cluster_size($b) <=> BestEffortLocal::cluster_size($a)} (@clusters);
+
 	my $target_clusters_number = ceil($target_number/$self->{platform}->cluster_size());
 
 	for my $cluster (@sorted_clusters) {

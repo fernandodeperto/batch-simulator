@@ -23,13 +23,9 @@ use constant {
 };
 
 sub new {
-	my $class = shift;
+	my ($class, $reduction_algorithm, $communication_level, @remaining_parameters) = @_;
 
-	# Additional parameters
-	my $reduction_algorithm = shift;
-	my $communication_level = shift;
-
-	my $self = $class->SUPER::new(@_);
+	my $self = $class->SUPER::new(@remaining_parameters);
 
 	$self->{execution_profile} = ExecutionProfile->new(
 		$self->{platform}->processors_number(),
@@ -43,7 +39,7 @@ sub new {
 }
 
 sub run {
-	my $self = shift;
+	my ($self) = @_;
 
 	$self->{reserved_jobs} = []; # jobs not started yet
 	$self->{started_jobs} = {}; # jobs that have already started
@@ -112,7 +108,7 @@ sub run {
 }
 
 sub start_jobs {
-	my $self = shift;
+	my ($self) = @_;
 	my @remaining_reserved_jobs;
 
 	@{$self->{reserved_jobs}} = sort {$a->requested_time() <=> $b->requested_time()} (@{$self->{reserved_jobs}}) if $config->param('backfilling.sort_reserved_jobs');
@@ -136,8 +132,7 @@ sub start_jobs {
 }
 
 sub reassign_jobs {
-	my $self = shift;
-	my $latest_ending_time = shift;
+	my ($self, $latest_ending_time) = @_;
 
 	for my $job (@{$self->{reserved_jobs}}) {
 		next unless $self->{execution_profile}->available_processors($self->{current_time}) >= $job->requested_cpus();
@@ -168,8 +163,7 @@ sub reassign_jobs {
 }
 
 sub assign_job {
-	my $self = shift;
-	my $job = shift;
+	my ($self, $job) = @_;
 
 	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile($job);
 

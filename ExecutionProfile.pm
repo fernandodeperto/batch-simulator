@@ -16,11 +16,7 @@ use ProcessorRange;
 use overload '""' => \&stringification;
 
 sub new {
-	my $class = shift;
-	my $processors_number = shift;
-	my $reduction_algorithm = shift;
-
-	confess unless defined $processors_number;
+	my ($class, $processors_number, $reduction_algorithm) = @_;
 
 	my $self = {
 		processors_number => $processors_number,
@@ -35,9 +31,7 @@ sub new {
 }
 
 sub get_free_processors {
-	my $self = shift;
-	my $job = shift;
-	my $starting_time = shift;
+	my ($self, $job, $starting_time) = @_;
 
 	my $duration = 0;
 
@@ -46,7 +40,7 @@ sub get_free_processors {
 
 	$self->{profile_tree}->nodes_loop($starting_time, undef,
 		sub {
-			my $profile = shift;
+			my ($profile) = @_;
 
 			# stop if we have enough profiles
 			return 0 if $duration >= $requested_time;
@@ -74,22 +68,22 @@ sub get_free_processors {
 		return;
 	}
 
-
 	return $left_processors;
 }
 
 sub available_processors {
-	my $self = shift;
-	my $starting_time = shift;
+	my ($self, $starting_time) = @_;
+
+	my @available_processors;
 
 	my $profile = $self->{profile_tree}->find_content($starting_time);
-	return $profile->processors()->processors_ids() if defined $profile;
+	@available_processors = $profile->processors()->processors_ids() if defined $profile;
+
+	return @available_processors;
 }
 
 sub remove_job {
-	my $self = shift;
-	my $job = shift;
-	my $current_time = shift;
+	my ($self, $job, $current_time) = @_;
 
 	my $starting_time = $job->starting_time();
 	my $job_ending_time = $job->submitted_ending_time();
@@ -98,7 +92,7 @@ sub remove_job {
 	Profile::set_comparison_function('all_times');
 	$self->{profile_tree}->nodes_loop($starting_time, $job_ending_time,
 		sub {
-			my $profile = shift;
+			my ($profile) = @_;
 			push @impacted_profiles, $profile;
 			return 1;
 		}
@@ -192,16 +186,14 @@ sub remove_job {
 }
 
 sub add_job  {
-	my $self = shift;
-	my $starting_time = shift;
-	my $job = shift;
+	my ($self, $starting_time, $job) = @_;
 
 	my @profiles_to_update;
 	my $ending_time = $starting_time + $job->requested_time();
 
 	$self->{profile_tree}->nodes_loop($starting_time, $ending_time,
 		sub {
-			my $profile = shift;
+			my ($profile) = @_;
 
 			# avoid including a profile that starts at $ending_time
 			return 0 if $profile->starting_time() == $ending_time;
@@ -221,16 +213,14 @@ sub add_job  {
 }
 
 sub could_start_job {
-	my $self = shift;
-	my $job = shift;
-	my $starting_time = shift;
+	my ($self, $job, $starting_time) = @_;
 
 	my $min_processors = $job->requested_cpus();
 	my $job_ending_time = $starting_time + $job->requested_time();
 
 	$self->{profile_tree}->nodes_loop($starting_time, undef,
 		sub {
-			my $profile = shift;
+			my ($profile) = @_;
 
 			# gap in the profile, can't use it to run the job
 			unless ($starting_time == $profile->starting_time()) {
@@ -254,8 +244,7 @@ sub could_start_job {
 }
 
 sub find_first_profile {
-	my $self = shift;
-	my $job = shift;
+	my ($self, $job) = @_;
 
 	# used to return the results
 	my $starting_time;
@@ -267,7 +256,7 @@ sub find_first_profile {
 
 	$self->{profile_tree}->nodes_loop(undef, undef,
 		sub {
-			my $profile = shift;
+			my ($profile) = @_;
 
 			# gap in the list of profiles
 			@included_profiles = () if defined $previous_ending_time and $previous_ending_time != $profile->starting_time();
@@ -294,15 +283,14 @@ sub find_first_profile {
 }
 
 sub set_current_time {
-	my $self = shift;
-	my $current_time = shift;
+	my ($self, $current_time) = @_;
 
 	my $updated_profile;
 	my @removed_profiles;
 
 	$self->{profile_tree}->nodes_loop(undef, $current_time,
 		sub {
-			my $profile = shift;
+			my ($profile) = @_;
 
 			return 0 if $profile->starting_time() == $current_time;
 
@@ -333,12 +321,12 @@ sub set_current_time {
 }
 
 sub free_profiles {
-	my $self = shift;
+	my ($self) = @_;
 	my @profiles;
 
 	$self->{profile_tree}->nodes_loop(undef, undef,
 		sub {
-			my $profile = shift;
+			my ($profile) = @_;
 			push @profiles, $profile;
 			return 1;
 		}
@@ -348,16 +336,17 @@ sub free_profiles {
 		$self->{profile_tree}->remove_content($profile);
 		$profile->processors()->free_allocated_memory();
 	}
+
 	return;
 }
 
 sub stringification {
-	my $self = shift;
+	my ($self) = @_;
 	my @profiles;
 
 	$self->{profile_tree}->nodes_loop(undef, undef,
 		sub {
-			my $profile = shift;
+			my ($profile) = @_;
 			push @profiles, $profile;
 			return 1;
 		});
@@ -372,7 +361,7 @@ sub save_svg {
 	my @profiles;
 	$self->{profile_tree}->nodes_loop(undef, undef,
 		sub {
-			my $profile = shift;
+			my ($profile) = @_;
 			push @profiles, $profile;
 			return 1;
 		});
@@ -390,7 +379,7 @@ sub save_svg {
 	my $current_x = $w_ratio * $time;
 	print $filehandle "<line x1=\"$current_x\" x2=\"$current_x\" y1=\"0\" y2=\"600\" style=\"stroke:rgb(255,0,0);stroke-width:5\"/>\n";
 
-	for my $profile_index (0..($#profiles-1)) {
+	for my $profile_index (0..($#profiles - 1)) {
 		$profiles[$profile_index]->svg($filehandle, $w_ratio, $h_ratio, $time, $profile_index);
 	}
 

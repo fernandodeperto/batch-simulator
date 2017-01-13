@@ -5,8 +5,7 @@ use warnings;
 # Constructors
 
 sub new {
-	my $class = shift;
-	my $content = shift;
+	my ($class, $content) = @_;
 
 	my $self = {
 		content => $content,
@@ -20,8 +19,7 @@ sub new {
 # Public routines
 
 sub add_child {
-	my $self = shift;
-	my $child = shift;
+	my ($self, $child) = @_;
 
 	push @{$self->{children}}, $child;
 
@@ -32,18 +30,18 @@ sub add_child {
 # Getters and setters
 
 sub children {
-	my $self = shift;
-	my $children = shift;
+	my ($self, $children) = @_;
 
 	$self->{children} = $children if defined $children;
+
 	return $self->{children};
 }
 
 sub content {
-	my $self = shift;
-	my $content = shift;
+	my ($self, $content) = @_;
 
 	$self->{content} = $content if defined $content;
+
 	return $self->{content};
 }
 

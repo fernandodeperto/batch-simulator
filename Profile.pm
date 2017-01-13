@@ -19,10 +19,7 @@ use overload
 ;
 
 sub new {
-	my $class = shift;
-	my $starting_time = shift;
-	my $ending_time = shift;
-	my $ids = shift;
+	my ($class, $starting_time, $ending_time, $ids) = @_;
 
 	my $self = {
 		starting_time => $starting_time,
@@ -38,7 +35,7 @@ sub new {
 }
 
 sub stringification {
-	my $self = shift;
+	my ($self) = @_;
 
 	my $cpus_number = scalar $self->{processors}->processors_ids();
 
@@ -46,8 +43,7 @@ sub stringification {
 }
 
 sub processors {
-	my $self = shift;
-	my $processors = shift;
+	my ($self, $processors) = @_;
 
 	$self->{processors} = $processors if defined $processors;
 
@@ -55,20 +51,19 @@ sub processors {
 }
 
 sub processors_ids {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{processors}->processors_ids();
 }
 
 sub duration {
-	my $self = shift;
+	my ($self) = @_;
 
 	return $self->{ending_time} - $self->{starting_time} if defined $self->{ending_time};
 	return;
 }
 
 sub ending_time {
-	my $self = shift;
-	my $ending_time = shift;
+	my ($self, $ending_time) = @_;
 
 	$self->{ending_time} = $ending_time if defined $ending_time;
 
@@ -76,15 +71,13 @@ sub ending_time {
 }
 
 sub add_job {
-	my $self = shift;
-	my $job = shift;
+	my ($self, $job) = @_;
 
 	return $self->split_by_job($job);
 }
 
 sub remove_job {
-	my $self = shift;
-	my $job = shift;
+	my ($self, $job) = @_;
 
 	$self->{processors}->add($job->assigned_processors());
 
@@ -92,8 +85,7 @@ sub remove_job {
 }
 
 sub split_by_job {
-	my $self = shift;
-	my $job = shift;
+	my ($self, $job) = @_;
 
 	my @profiles;
 
@@ -118,8 +110,7 @@ sub split_by_job {
 }
 
 sub remove_processors {
-	my $self = shift;
-	my $job = shift;
+	my ($self, $job) = @_;
 
 	my $assigned_processors_ids = $job->assigned_processors_ids();
 	$self->{processors}->remove($assigned_processors_ids);
@@ -128,14 +119,15 @@ sub remove_processors {
 }
 
 sub starting_time {
-	my $self = shift;
-	$self->{starting_time} = shift if @_;
+	my ($self, $starting_time) = @_;
+
+	$self->{starting_time} = $starting_time if defined $starting_time;
+
 	return $self->{starting_time};
 }
 
 sub ends_after {
-	my $self = shift;
-	my $time = shift;
+	my ($self, $time) = @_;
 
 	return 1 unless defined $self->{ending_time};
 	return $self->{ending_time} > $time;
@@ -175,22 +167,18 @@ my %comparison_functions = (
 );
 
 sub set_comparison_function {
-	$comparison_function = shift;
+	($comparison_function) = @_;
 	return;
 }
 
 sub three_way_comparison {
-	my $self = shift;
-	my $other = shift;
-	my $inverted = shift;
+	my ($self, $other, $inverted) = @_;
 
 	return $comparison_functions{$comparison_function}->($self, $other, $inverted);
 }
 
 sub starting_times_comparison {
-	my $self = shift;
-	my $other = shift;
-	my $inverted = shift;
+	my ($self, $other, $inverted) = @_;
 
 	# Save two calls to the comparison functions if $other is a Profile
 	$other = $other->starting_time() if defined blessed($other) and blessed($other) eq 'Profile';
@@ -200,9 +188,7 @@ sub starting_times_comparison {
 }
 
 sub all_times_comparison {
-	my $self = shift;
-	my $other = shift;
-	my $inverted = shift;
+	my ($self, $other, $inverted) = @_;
 
 	return $self->{starting_time} <=> $other->{starting_time} if defined blessed($other) and blessed($other) eq 'Profile';
 
@@ -214,9 +200,7 @@ sub all_times_comparison {
 }
 
 sub subtract {
-	my $self = shift;
-	my $other = shift;
-	my $inverted = shift;
+	my ($self, $other, $inverted) = @_;
 
 	# Save two calls to the comparison functions if $other is a Profile
 	$other = $other->starting_time() if defined blessed($other) and blessed($other) eq 'Profile';

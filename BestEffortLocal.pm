@@ -6,11 +6,8 @@ use warnings;
 use Data::Dumper;
 use List::Util qw(min sum);
 
-use ProcessorRange;
-
 sub new {
-	my $class = shift;
-	my $platform = shift;
+	my ($class, $platform) = @_;
 
 	my $self = {
 		platform => $platform,
@@ -21,15 +18,13 @@ sub new {
 }
 
 sub reduce {
-	my $self = shift;
-	my $job = shift;
-	my $left_processors = shift;
-
-	my $target_number = $job->requested_cpus();
+	my ($self, $job, $left_processors) = @_;
 
 	my @remaining_ranges;
 	my $used_clusters_number = 0;
 	my $current_cluster;
+
+	my $target_number = $job->requested_cpus();
 
 	my @clusters = $self->{platform}->job_processors_in_clusters($left_processors);
 	my @sorted_clusters = sort {cluster_size($b) <=> cluster_size($a)} (@clusters);
@@ -49,11 +44,13 @@ sub reduce {
 	}
 
 	$left_processors->affect_ranges(ProcessorRange::sort_and_fuse_contiguous_ranges(\@remaining_ranges));
+
 	return;
 }
 
 sub cluster_size {
-	my $cluster = shift;
+	my ($cluster) = @_;
+
 	return sum map {$_->[1] - $_->[0] + 1} (@{$cluster});
 }
 

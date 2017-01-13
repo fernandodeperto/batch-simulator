@@ -10,17 +10,16 @@ use ProcessorRange;
 use BestEffortPlatform qw(DEFAULT SMALLEST_FIRST BIGGEST_FIRST);
 
 sub new {
-	my $class = shift;
-	my $self = $class->SUPER::new(@_);
+	my ($class, @remaining_parameters) = @_;
+
+	my $self = $class->SUPER::new(@remaining_parameters);
 
 	bless $self, $class;
 	return $self;
 }
 
 sub reduce {
-	my $self = shift;
-	my $job = shift;
-	my $left_processors = shift;
+	my ($self, $job, $left_processors) = @_;
 
 	my $available_cpus = $self->{platform}->available_cpus_in_clusters($left_processors);
 	my $cpus_structure = $self->{platform}->build_structure($available_cpus);
@@ -36,9 +35,7 @@ sub reduce {
 }
 
 sub choose_cpus {
-	my $self = shift;
-	my $cpus_structure = shift;
-	my $target_number = shift;
+	my ($self, $cpus_structure, $target_number) = @_;
 
 	my @suitable_levels = grep {$_->[0]->{total_original_size} >= $target_number} (@{$cpus_structure});
 

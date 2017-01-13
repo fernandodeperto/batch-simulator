@@ -16,9 +16,7 @@ use Job;
 # Constructors
 
 sub new {
-	my $class = shift;
-	my $platform = shift;
-	my $trace = shift;
+	my ($class, $platform, $trace) = @_;
 
 	my $self = {
 		trace => $trace,
@@ -34,7 +32,7 @@ sub new {
 }
 
 sub run {
-	my $self = shift;
+	my ($self) = @_;
 
 	$self->assign_job($_) for @{$self->{trace}->jobs()};
 
@@ -44,56 +42,54 @@ sub run {
 # Getters and setters
 
 sub trace {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{trace};
 }
 
 sub run_time {
-	my $self = shift;
-
+	my ($self) = @_;
 	return $self->{run_time};
 }
 
 # Metrics
 
 sub cmax {
-	my $self = shift;
+	my ($self) = @_;
 	return max map {$_->real_ending_time()} (@{$self->{trace}->jobs()});
 }
 
 sub sum_flow_time {
-	my $self = shift;
+	my ($self) = @_;
 	return sum map {$_->flow_time()} @{$self->{trace}->jobs()};
 }
 
 sub max_flow_time {
-	my $self = shift;
+	my ($self) = @_;
 	return max map {$_->flow_time()} @{$self->{trace}->jobs()};
 }
 
 sub mean_flow_time {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->sum_flow_time() / @{$self->{trace}->jobs()};
 }
 
 sub sum_stretch {
-	my $self = shift;
+	my ($self) = @_;
 	return sum map {$_->bounded_stretch()} @{$self->{trace}->jobs()};
 }
 
 sub max_stretch {
-	my $self = shift;
+	my ($self) = @_;
 	return max map {$_->bounded_stretch()} @{$self->{trace}->jobs()};
 }
 
 sub mean_stretch {
-	my $self = shift;
+	my ($self) = @_;
 	return (sum map {$_->stretch()} @{$self->{trace}->jobs()}) / @{$self->{trace}->jobs()};
 }
 
 sub bounded_stretch {
-	my $self = shift;
-	my $bound = shift;
+	my ($self, $bound) = @_;
 
 	$bound = 10 unless defined $bound;
 
@@ -104,25 +100,22 @@ sub bounded_stretch {
 }
 
 sub stretch_sum_of_squares {
-	my $self = shift;
-
+	my ($self) = @_;
 	return sqrt(sum map {$_->bounded_stretch(10) ** 2} (@{$self->{trace}->jobs()}));
 }
 
 sub stretch_with_cpus_squared {
-	my $self = shift;
-
+	my ($self) = @_;
 	return sum map {$_->bounded_stretch_with_cpus_squared(10)} (@{$self->{trace}->jobs()});
 }
 
 sub stretch_with_cpus_log {
-	my $self = shift;
-
+	my ($self) = @_;
 	return sum map {$_->bounded_stretch_with_cpus_log(10)} (@{$self->{trace}->jobs()});
 }
 
 sub flow_time_pnorm {
-	my $self = shift;
+	my ($self) = @_;
 
 	my $pnorm = $config->param('parameters.pnorm');
 
@@ -130,7 +123,7 @@ sub flow_time_pnorm {
 }
 
 sub stretch_pnorm {
-	my $self = shift;
+	my ($self) = @_;
 
 	my $pnorm = $config->param('parameters.pnorm');
 
@@ -138,31 +131,33 @@ sub stretch_pnorm {
 }
 
 sub contiguous_jobs_number {
-	my $self = shift;
+	my ($self) = @_;
 	return sum map {$self->{platform}->job_contiguity($_->assigned_processors())} (@{$self->{trace}->jobs()});
 }
 
 sub contiguity_factor {
-	my $self = shift;
+	my ($self) = @_;
 
 	my $total_contiguity_factor = sum map {$self->{platform}->job_contiguity_factor($_->assigned_processors())} (@{$self->{trace}->jobs()});
+
 	return $total_contiguity_factor/scalar @{$self->{trace}->jobs()};
 }
 
 sub local_jobs_number {
-	my $self = shift;
+	my ($self) = @_;
 	return sum map {$self->{platform}->job_locality($_->assigned_processors())} (@{$self->{trace}->jobs()});
 }
 
 sub locality_factor {
-	my $self = shift;
+	my ($self) = @_;
 
 	my $total_locality_factor = sum map {$self->{platform}->job_locality_factor($_->assigned_processors())} (@{$self->{trace}->jobs()});
+
 	return $total_locality_factor/scalar @{$self->{trace}->jobs()};
 }
 
 sub platform_level_factor {
-	my $self = shift;
+	my ($self) = @_;
 
 	my $job_level_distances = sum map {$self->{platform}->job_relative_level_distance($_->assigned_processors(), $_->requested_cpus())} (@{$self->{trace}->jobs()});
 
@@ -170,7 +165,7 @@ sub platform_level_factor {
 }
 
 sub job_success_rate {
-	my $self = shift;
+	my ($self) = @_;
 	return sum map {($_->status() == JOB_STATUS_COMPLETED) ? 1 : 0} (@{$self->{trace}->jobs()});
 }
 

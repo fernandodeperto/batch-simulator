@@ -3,18 +3,18 @@ use strict;
 use warnings;
 
 sub new {
-	my $class = shift;
-	my $self = {};
+	my ($class, $sentinel) = @_;
 
-	my $sentinel = shift;
-	$self->{elements} = [ $sentinel ];
+	my $self = {
+		elements => [$sentinel],
+	};
 
 	bless $self, $class;
 	return $self;
 }
 
 sub retrieve {
-	my $self = shift;
+	my ($self) = @_;
 
 	return unless defined $self->{elements}->[1];
 	my $min_element = $self->{elements}->[1];
@@ -28,7 +28,7 @@ sub retrieve {
 }
 
 sub retrieve_all {
-	my $self = shift;
+	my ($self) = @_;
 	return unless defined $self->{elements}->[1];
 
 	my @min_elements = ($self->retrieve());
@@ -41,7 +41,7 @@ sub retrieve_all {
 }
 
 sub not_empty {
-	my $self = shift;
+	my ($self) = @_;
 	return defined $self->{elements}->[1];
 }
 
@@ -51,54 +51,57 @@ sub next_element {
 }
 
 sub add {
-	my $self = shift;
-	my $element = shift;
+	my ($self, $element) = @_;
 
 	push @{$self->{elements}}, $element;
 
 	$self->_move_last_up();
+
 	return;
 }
 
 sub _move_last_up {
-	my $self = shift;
+	my ($self) = @_;
 
 	my $current_position = $#{$self->{elements}};
-	my $father = int $current_position / 2;
+	my $father = int($current_position / 2);
 
 	while ($self->{elements}->[$current_position] < $self->{elements}->[$father]) {
 		$self->_exchange($current_position, $father);
 
 		$current_position = $father;
-		$father = int $father / 2;
+		$father = int($father / 2);
 	}
+
 	return;
 }
 
 sub _move_first_down {
-	my $self = shift;
+	my ($self) = @_;
 
 	my $current_position = 1;
 	my $min_child_index = $self->_find_min_child($current_position);
+
 	while ((defined $min_child_index) and ($self->{elements}->[$min_child_index] < $self->{elements}->[$current_position])) {
 		$self->_exchange($current_position, $min_child_index);
 		$current_position = $min_child_index;
 		$min_child_index = $self->_find_min_child($current_position);
 	}
+
 	return;
 }
 
 sub _exchange {
-	my $self = shift;
-	my $a = shift;
-	my $b = shift;
+	my ($self, $a, $b) = @_;
+
 	($self->{elements}->[$a], $self->{elements}->[$b]) = ($self->{elements}->[$b], $self->{elements}->[$a]);
+
 	return;
 }
 
 sub _find_min_child {
-	my $self = shift;
-	my $index = shift;
+	my ($self, $index) = @_;
+
 	my ($child1, $child2) = (2*$index, 2*$index+1);
 
 	return unless defined $self->{elements}->[$child1];

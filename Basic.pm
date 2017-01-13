@@ -8,7 +8,7 @@ use Scalar::Util qw(blessed);
 use ProcessorRange;
 
 sub new {
-	my $class = shift;
+	my ($class) = @_;
 
 	my $self = {};
 
@@ -17,12 +17,9 @@ sub new {
 }
 
 sub reduce {
-	my $self = shift;
-	my $job = shift;
-	my $left_processors = shift;
+	my ($self, $job, $left_processors) = @_;
 
 	my $target_number = $job->requested_cpus();
-
 	my @remaining_ranges;
 
 	$left_processors->ranges_loop(
@@ -42,6 +39,7 @@ sub reduce {
 	);
 
 	$left_processors->affect_ranges(ProcessorRange::sort_and_fuse_contiguous_ranges(\@remaining_ranges));
+
 	return;
 }
 

@@ -19,7 +19,7 @@ our @EXPORT_OK = qw(
 our $config;
 
 sub git_tree_dirty {
-	my $git_path = shift;
+	my ($git_path) = @_;
 
 	$git_path = '.' unless defined $git_path;
 
@@ -29,7 +29,7 @@ sub git_tree_dirty {
 }
 
 sub git_desribe {
-	my $git_path = shift;
+	my ($git_path) = @_;
 
 	$git_path = '.' unless defined $git_path;
 
@@ -39,7 +39,7 @@ sub git_desribe {
 }
 
 sub git_version {
-	my $git_path = shift;
+	my ($git_path) = @_;
 
 	$git_path = '.' unless defined $git_path;
 
@@ -54,9 +54,7 @@ use constant {
 };
 
 sub float_equal {
-	my $a = shift;
-	my $b = shift;
-	my $precision = shift;
+	my ($a, $b, $precision) = @_;
 
 	$precision = 6 unless defined $precision;
 

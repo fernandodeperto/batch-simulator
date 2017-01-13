@@ -14,8 +14,7 @@ use ProcessorRange;
 # Constructors and helper functions
 
 sub new {
-	my $class = shift;
-	my $levels = shift;
+	my ($class, $levels) = @_;
 
 	my $self = {
 		levels => [@{$levels}],
@@ -26,30 +25,27 @@ sub new {
 }
 
 sub processors_number {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{levels}->[-1];
 }
 
 sub cluster_size {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{levels}->[-1]/$self->{levels}->[-2];
 }
 
 # Tree structure
 
 sub build_tree {
-	my $self = shift;
-	my $available_cpus = shift;
+	my ($self, $available_cpus) = @_;
 
 	$self->{root} = $self->_build_tree(0, 0, $available_cpus);
+
 	return;
 }
 
 sub _build_tree {
-	my $self = shift;
-	my $level = shift;
-	my $node = shift;
-	my $available_cpus = shift;
+	my ($self, $level, $node, $available_cpus) = @_;
 
 	my $next_level_nodes = $self->{levels}->[$level + 1]/$self->{levels}->[$level];
 	my @next_level_nodes_ids = map {$next_level_nodes * $node + $_} (0..($next_level_nodes - 1));
@@ -71,48 +67,23 @@ sub _build_tree {
 
 	my $tree_content = {total_size => $total_size, id => $node};
 	my $tree = Tree->new($tree_content);
+
 	$tree->children(\@children);
+
 	return $tree;
 }
 
-sub choose_combination {
-	my $self = shift;
-	my $requested_cpus = shift;
-
-	$self->_score($self->{root}, 0, $requested_cpus);
-	return $self->_choose_combination($self->{root}, 0, $requested_cpus);
-}
-
-sub _choose_combination {
-	my $self = shift;
-	my $tree = shift;
-	my $level = shift;
-	my $requested_cpus = shift;
-
-	# return nothing if requested_cpus is 0
-	return unless ($requested_cpus);
-
-	# return if at the last level
-	return [$tree->content()->{id}, $requested_cpus] if ($level == $#{$self->{levels}} - 1);
-
-	my $best_combination = $tree->content()->{$requested_cpus}->{combination};
-
-	my @children = @{$tree->children()};
-	return map {$self->_choose_combination($_, $level + 1, shift @{$best_combination})} (@children);
-}
-
 sub choose_cpus {
-	my $self = shift;
-	my $requested_cpus = shift;
+	my ($self, $requested_cpus) = @_;
 
 	$self->_score($self->{root}, 0, $requested_cpus);
+
+
 	return $self->_choose_cpus($self->{root}, $requested_cpus);
 }
 
 sub _choose_cpus {
-	my $self = shift;
-	my $tree = shift;
-	my $requested_cpus = shift;
+	my ($self, $tree, $requested_cpus) = @_;
 
 	# no requested cpus
 	return unless $requested_cpus;
@@ -130,10 +101,7 @@ sub _choose_cpus {
 }
 
 sub _combinations {
-	my $self = shift;
-	my $tree = shift;
-	my $requested_cpus = shift;
-	my $node = shift;
+	my ($self, $tree, $requested_cpus, $node) = @_;
 
 	my @children = @{$tree->children()};
 	my $last_child = $#children;
@@ -158,10 +126,7 @@ sub _combinations {
 }
 
 sub _score {
-	my $self = shift;
-	my $tree = shift;
-	my $level = shift;
-	my $requested_cpus = shift;
+	my ($self, $tree, $level, $requested_cpus) = @_;
 
 	# no needed CPUs
 	return 0 unless $requested_cpus;
@@ -200,32 +165,20 @@ sub _score {
 	}
 
 	$tree->content()->{$requested_cpus} = \%best_combination;
+
 	return $best_combination{score};
 }
 
-sub generate_all_combinations {
-	my $self = shift;
-	my $requested_cpus = shift;
-
-	return $self->_combinations($self->{root}, $requested_cpus, 0);
-}
-
 sub _score_function_pnorm {
-	my $self = shift;
-	my $child_requested_cpus = shift;
-	my $requested_cpus = shift;
-	my $level = shift;
+	my ($self, $child_requested_cpus, $requested_cpus, $level) = @_;
 
-	my $max_depth = scalar @{$self->{levels}} - 1;
-
-	return $child_requested_cpus * ($requested_cpus - $child_requested_cpus) * pow(($max_depth - $level) * 2, $self->{norm});
+	return $child_requested_cpus * ($requested_cpus - $child_requested_cpus) * pow(($#{$self->{levels}} - $level) * 2, $self->{norm});
 }
 
 # Linear structure
 
 sub build_structure {
-	my $self = shift;
-	my $available_cpus = shift;
+	my ($self, $available_cpus) = @_;
 
 	my $last_level = $#{$self->{levels}} - 1;
 
@@ -254,21 +207,19 @@ sub build_structure {
 		}
 	}
 
+	return @cpus_structure if wantarray;
 	return \@cpus_structure;
 }
 
 sub generate_slowdown {
-	my $self = shift;
-	my $benchmark = shift;
-	my $platform_file = shift;
-	my $replay_script = shift;
+	my ($self, $benchmark, $platform_file, $replay_script) = @_;
 
 	my $hosts_file = '/tmp/hosts';
 	my $cpus_number = 2;
 
 	my $last_level = $#{$self->{levels}};
 
-	my @hosts_configs = reverse map {[0, int($self->{levels}->[-1]/$self->{levels}->[$_])]} (1..$last_level);
+	my @hosts_configs = reverse map {[0, int($self->{levels}->[$last_level]/$self->{levels}->[$_])]} (1..$last_level);
 
 	my @results;
 
@@ -286,55 +237,46 @@ sub generate_slowdown {
 		push @results, $1;
 	}
 
-	my $base_runtime = $results[0];
-	@results = map {$_/$base_runtime} (@results);
-	@{$self->{slowdown}} = @results;
+	@results = map {$_/$results[0]} (@results);
+	$self->{slowdown} = [@results];
 
 	return;
 }
 
-sub set_slowdown_from_lantencies {
-	my $self = shift;
-	my $latencies = shift;
+sub set_slowdown_from_latencies {
+	my ($self, $latencies) = @_;
 
 	@{$self->{slowdown}} = reverse map {$_/$latencies->[-1]} (@{$latencies});
+
 	return;
 }
 
 sub save_hosts_file {
-	my $hosts_config = shift;
-	my $hosts_file = shift;
+	my ($hosts_config, $hosts_file) = @_;
 
 	open(my $file, '>', $hosts_file);
 	print $file join("\n", @{$hosts_config}) . "\n";
 	close($file);
-}
 
-sub set_slowdown {
-	my $self = shift;
-	my $platform_slowdown = shift;
-
-	$self->{slowdown} = [@{$platform_slowdown}];
 	return;
 }
 
 sub slowdown {
-	my $self = shift;
-	my $level = shift;
+	my ($self, $slowdown) = @_;
 
-	return unless defined $self->{slowdown};
+	if (defined $slowdown) {
+		return $self->{slowdown}->[$slowdown] unless ref $slowdown eq 'ARRAY';
 
-	return $self->{slowdown}->[$level] if defined $level;
+		$self->{slowdown} = [@{$slowdown}];
+	}
+
 	return @{$self->{slowdown}};
 }
 
 # Platform XML
 
 sub build_platform_xml {
-	my $self = shift;
-	my $power = shift;
-	my $bandwidths = shift;
-	my $latencies = shift;
+	my ($self, $power, $bandwidths, $latencies) = @_;
 
 	my @platform_parts = @{$self->{levels}};
 
@@ -411,12 +353,12 @@ sub build_platform_xml {
 	}
 
 	$self->{xml} = $xml;
+
 	return;
 }
 
 sub save_platform_xml {
-	my $self = shift;
-	my $filename = shift;
+	my ($self, $filename) = @_;
 
 	open(my $file, '>', $filename);
 
@@ -428,8 +370,7 @@ sub save_platform_xml {
 # Platform level measure for jobs
 
 sub job_level_distance {
-	my $self = shift;
-	my $assigned_processors = shift;
+	my ($self, $assigned_processors) = @_;
 
 	my @used_clusters = $self->job_used_clusters($assigned_processors);
 	my $last_level = $#{$self->{levels}};
@@ -453,12 +394,11 @@ sub job_level_distance {
 }
 
 sub job_minimum_level_distance {
-	my $self = shift;
-	my $requested_cpus = shift;
+	my ($self, $requested_cpus) = @_;
 
 	my $last_level = $#{$self->{levels}};
-
 	my $minimum_level_distance;
+
 	for my $level (reverse(0..($last_level - 1))) {
 		my $cpus_per_level = $self->{levels}->[$last_level] / $self->{levels}->[$level];
 
@@ -469,9 +409,7 @@ sub job_minimum_level_distance {
 }
 
 sub job_relative_level_distance {
-	my $self = shift;
-	my $assigned_processors = shift;
-	my $requested_cpus = shift;
+	my ($self, $assigned_processors, $requested_cpus) = @_;
 
 	my $last_level = $#{$self->{levels}};
 	my $clusters_number = $self->{levels}->[-2];
@@ -508,8 +446,7 @@ sub job_relative_level_distance {
 # Contiguity and locality
 
 sub job_contiguity {
-	my $self = shift;
-	my $assigned_processors = shift;
+	my ($self, $assigned_processors) = @_;
 
 	my @ranges = $assigned_processors->pairs();
 
@@ -522,8 +459,7 @@ sub job_contiguity {
 }
 
 sub job_contiguity_factor {
-	my $self = shift;
-	my $assigned_processors = shift;
+	my ($self, $assigned_processors) = @_;
 
 	my @ranges = $assigned_processors->pairs();
 
@@ -534,8 +470,7 @@ sub job_contiguity_factor {
 }
 
 sub job_locality {
-	my $self = shift;
-	my $assigned_processors = shift;
+	my ($self, $assigned_processors) = @_;
 
 	my @used_clusters = $self->job_used_clusters($assigned_processors);
 
@@ -544,8 +479,7 @@ sub job_locality {
 }
 
 sub job_used_clusters {
-	my $self = shift;
-	my $assigned_processors = shift;
+	my ($self, $assigned_processors) = @_;
 
 	my %used_clusters;
 
@@ -567,8 +501,7 @@ sub job_used_clusters {
 }
 
 sub job_processors_in_clusters {
-	my $self = shift;
-	my $assigned_processors = shift;
+	my ($self, $assigned_processors) = @_;
 
 	my @clusters;
 	my $current_cluster;
@@ -598,8 +531,7 @@ sub job_processors_in_clusters {
 }
 
 sub available_cpus_in_clusters {
-	my $self = shift;
-	my $processors = shift;
+	my ($self, $processors) = @_;
 
 	my @available_cpus;
 
@@ -627,12 +559,12 @@ sub available_cpus_in_clusters {
 		}
 	);
 
+	return @available_cpus if wantarray;
 	return \@available_cpus;
 }
 
 sub job_locality_factor {
-	my $self = shift;
-	my $assigned_processors = shift;
+	my ($self, $assigned_processors) = @_;
 
 	return $self->job_used_clusters($assigned_processors) / ceil($assigned_processors->size() / $self->cluster_size());
 }

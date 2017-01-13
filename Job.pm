@@ -43,7 +43,7 @@ use constant {
 our @EXPORT = qw(JOB_STATUS_COMPLETED JOB_STATUS_FAILED JOB_STATUS_CANCELED);
 
 sub stringification {
-	my $self = shift;
+	my ($self) = @_;
 
 	return join(' ',
 		map {(defined $_ ? $_ : '?')} (
@@ -73,27 +73,47 @@ sub stringification {
 # Constructors and destructors
 
 sub new {
-	my $class = shift;
+	my (
+		$class,
+		$job_number,
+		$submit_time,
+		$original_wait_time,
+		$run_time,
+		$allocated_cpus,
+		$avg_cpu_time,
+		$used_mem,
+		$requested_cpus,
+		$requested_time,
+		$requested_mem,
+		$status,
+		$uid,
+		$gid,
+		$exec_number,
+		$queue_number,
+		$partition_number,
+		$prec_job_number,
+		$think_time_prec_job,
+	) = @_;
 
 	my $self = {
-		job_number => shift, #1
-		submit_time => shift, #2
-		original_wait_time => shift, #3
-		run_time => shift, #4
-		allocated_cpus => shift, #5
-		avg_cpu_time => shift, #6
-		used_mem => shift, #7
-		requested_cpus => shift, #8
-		requested_time => shift, #9
-		requested_mem => shift, #10
-		status => shift, #11, 0 = failed, 5 = cancelled, 1 = completed
-		uid => shift, #12
-		gid => shift, #13
-		exec_number => shift, #14
-		queue_number => shift, #15
-		partition_number => shift, #16
-		prec_job_number => shift, #17
-		think_time_prec_job => shift, #18
+		job_number => $job_number, #1
+		submit_time => $submit_time, #2
+		original_wait_time => $original_wait_time, #3
+		run_time => $run_time, #4
+		allocated_cpus => $allocated_cpus, #5
+		avg_cpu_time => $avg_cpu_time, #6
+		used_mem => $used_mem, #7
+		requested_cpus => $requested_cpus, #8
+		requested_time => $requested_time, #9
+		requested_mem => $requested_mem, #10
+		status => $status, #11, 0 = failed, 5 = cancelled, 1 = completed
+		uid => $uid, #12
+		gid => $gid, #13
+		exec_number => $exec_number, #14
+		queue_number => $queue_number, #15
+		partition_number => $partition_number, #16
+		prec_job_number => $prec_job_number, #17
+		think_time_prec_job => $think_time_prec_job, #18
 	};
 
 	# sanity checks for some of the job fields
@@ -107,8 +127,7 @@ sub new {
 }
 
 sub copy {
-	my $class = shift;
-	my $original = shift;
+	my ($class, $original) = @_;
 
 	my $self = {};
 	%{$self} = %{$original};
@@ -118,7 +137,7 @@ sub copy {
 }
 
 sub DESTROY {
-	my $self = shift;
+	my ($self) = @_;
 
 	$self->{assigned_processors}->free_allocated_memory()
 		if defined $self->{assigned_processors};
@@ -129,8 +148,7 @@ sub DESTROY {
 # Getters and setters
 
 sub schedule_time {
-	my $self = shift;
-	my $schedule_time = shift;
+	my ($self, $schedule_time) = @_;
 
 	$self->{schedule_time} = $schedule_time if defined $schedule_time;
 
@@ -138,13 +156,12 @@ sub schedule_time {
 }
 
 sub requested_cpus {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{requested_cpus};
 }
 
 sub run_time {
-	my $self = shift;
-	my $run_time = shift;
+	my ($self, $run_time) = @_;
 
 	$self->{run_time} = $run_time if (defined $run_time);
 
@@ -152,8 +169,7 @@ sub run_time {
 }
 
 sub requested_time {
-	my $self = shift;
-	my $requested_time = shift;
+	my ($self, $requested_time) = @_;
 
 	$self->{requested_time} = $requested_time if (defined $requested_time);
 
@@ -161,8 +177,7 @@ sub requested_time {
 }
 
 sub starting_time {
-	my $self = shift;
-	my $starting_time = shift;
+	my ($self, $starting_time) = @_;
 
 	$self->{starting_time} = $starting_time if defined $starting_time;
 
@@ -170,22 +185,20 @@ sub starting_time {
 }
 
 sub submit_time {
-	my $self = shift;
-	my $submit_time = shift;
+	my ($self, $submit_time) = @_;
 
 	$self->{submit_time} = $submit_time if defined $submit_time;
 	return $self->{submit_time};
 }
 
 sub original_wait_time {
-	my $self = shift;
+	my ($self) = @_;
 
 	return $self->{original_wait_time};
 }
 
 sub job_number {
-	my $self = shift;
-	my $job_number = shift;
+	my ($self, $job_number) = @_;
 
 	$self->{job_number} = $job_number if defined $job_number;
 
@@ -193,77 +206,76 @@ sub job_number {
 }
 
 sub status {
-	my $self = shift;
-	my $status = shift;
+	my ($self, $status) = @_;
 
 	$self->{status} = $status if (defined $status);
 	return $self->{status};
 }
 
 sub assigned_processors {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{assigned_processors};
 }
 
 # Ending time
 
 sub real_ending_time {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{starting_time} + $self->{run_time};
 }
 
 sub submitted_ending_time {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{starting_time} + $self->{requested_time};
 }
 
 # Stretch
 
 sub flow_time {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{starting_time} - $self->{submit_time} + $self->{run_time};
 }
 
 sub bounded_stretch {
-	my $self = shift;
+	my ($self) = @_;
 	my $bound = $config->param('parameters.stretch_bound');
 
 	return max($self->flow_time()/max($self->{run_time}, $bound), 1);
 }
 
 sub bounded_stretch_with_cpus_squared {
-	my $self = shift;
-	my $time_limit = shift;
+	my ($self, $time_limit) = @_;
 
 	$time_limit = 10 unless (defined $time_limit);
+
 	return max($self->flow_time()/(max($self->{run_time}, $time_limit) * sqrt($self->{allocated_cpus})), 1);
 }
 
 sub bounded_stretch_with_cpus_log {
-	my $self = shift;
-	my $time_limit = shift;
+	my ($self, $time_limit) = @_;
 
 	$time_limit = 10 unless (defined $time_limit);
-	return max(($self->wait_time() + $self->{run_time})
-		/ (max($self->{run_time}, $time_limit)
-		* ($self->{allocated_cpus} == 1) ? 1 : log($self->{allocated_cpus})), 1);
+
+	return max(($self->wait_time() + $self->{run_time}) /
+		(max($self->{run_time}, $time_limit) *
+		($self->{allocated_cpus} == 1) ? 1 : log($self->{allocated_cpus})), 1);
 }
 
 sub original_bounded_stretch {
-	my $self = shift;
-	my $time_limit = shift;
+	my ($self, $time_limit) = @_;
 
 	die 'undefined job parameters' unless defined $self->{original_wait_time} and defined $self->{run_time};
+
 	return max(($self->{original_wait_time} + $self->{run_time})/max($self->{run_time}, ((defined $time_limit) ? $time_limit : 10)), 1);
 }
 
 sub stretch {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->wait_time()/$self->{run_time};
 }
 
 sub wait_time {
-	my $self = shift;
+	my ($self) = @_;
 
 	return unless defined $self->{starting_time};
 	return $self->{starting_time} - $self->{submit_time};
@@ -272,7 +284,7 @@ sub wait_time {
 # Assignment
 
 sub unassign {
-	my $self = shift;
+	my ($self) = @_;
 
 	delete $self->{starting_time};
 
@@ -285,9 +297,7 @@ sub unassign {
 }
 
 sub assign {
-	my $self = shift;
-	my $starting_time = shift;
-	my $assigned_processors = shift;
+	my ($self, $starting_time, $assigned_processors) = @_;
 
 	$self->{starting_time} = $starting_time;
 	$self->{assigned_processors}->free_allocated_memory() if defined $self->{assigned_processors};
@@ -299,12 +309,7 @@ sub assign {
 # SVG
 
 sub svg {
-	my $self = shift;
-	my $fh = shift;
-	my $w_ratio = shift;
-	my $h_ratio = shift;
-	my $current_time = shift;
-	my $platform = shift;
+	my ($self, $fh, $w_ratio, $h_ratio, $current_time, $platform) = @_;
 
 	my $job_platform_level = $platform->job_relative_level_distance($self->{assigned_processors}, $self->requested_cpus());
 	#my $job_platform_level = $platform->job_level_distance($self->{assigned_processors});

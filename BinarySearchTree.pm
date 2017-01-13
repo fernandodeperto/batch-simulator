@@ -10,12 +10,11 @@ use BinarySearchTree::Node;
 use POSIX;
 
 sub new {
-	my $class = shift;
-	my $sentinel = shift;
+	my ($class, $sentinel, $min_valid_key) = @_;
 
 	my $self = {
 		root => BinarySearchTree::Node->new($sentinel, undef, DBL_MAX),
-		min_valid_key => shift
+		min_valid_key => $min_valid_key,
 	};
 
 	bless $self, $class;
@@ -23,8 +22,7 @@ sub new {
 }
 
 sub add_content {
-	my $self = shift;
-	my $content = shift;
+	my ($self, $content) = @_;
 
 	my $node = $self->{root}->find_node($content);
 	confess "found duplicate for $content" if defined $node;
@@ -33,43 +31,44 @@ sub add_content {
 }
 
 sub remove_content {
-	my $self = shift;
-	my $content = shift;
+	my ($self, $content) = @_;
 
 	my $node = $self->{root}->find_node($content);
+
 	$node->remove();
+
 	return;
 }
 
 sub remove_node {
-	my $node = shift;
+	my ($node) = @_;
 	return $node->remove();
 }
 
 sub find_content {
-	my $self = shift;
-	my $key = shift;
+	my ($self, $key) = @_;
+
 	my $node = $self->{root}->find_node($key);
+
 	return $node->content() if defined $node;
 	return;
 }
 
 sub nodes_loop {
-	my $self = shift;
-	my $start_key = shift;
-	my $end_key = shift;
-	my $routine = shift;
+	my ($self, $start_key, $end_key, $routine) = @_;
 
 	$start_key = $self->{min_valid_key} unless defined $start_key;
 
 	$self->{root}->nodes_loop($start_key, $end_key, $routine);
+
 	return;
 }
 
 sub save_svg {
-	my $self = shift;
-	my $filename = shift;
+	my ($self, $filename) = @_;
+
 	$self->{root}->save_svg($filename);
+
 	return;
 }
 

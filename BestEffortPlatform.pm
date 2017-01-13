@@ -25,10 +25,9 @@ our @EXPORT_OK = qw(
 );
 
 sub new {
-	my $class = shift;
-	my $platform = shift;
+	my ($class, $platform, @remaining_parameters) = @_;
 
-	my %args = @_;
+	my %args = @remaining_parameters;
 	my $mode = $args{mode} or DEFAULT;
 
 	my $self = {
@@ -41,26 +40,22 @@ sub new {
 }
 
 sub reduce {
-	my $self = shift;
-	my $job = shift;
-	my $left_processors = shift;
+	my ($self, $job, $left_processors) = @_;
 
 	my $available_cpus = $self->{platform}->available_cpus_in_clusters($left_processors);
 	my $cpus_structure = $self->{platform}->build_structure($available_cpus);
 	my $chosen_ranges = $self->choose_cpus($cpus_structure, $job->requested_cpus());
 
 	$left_processors->affect_ranges(ProcessorRange::sort_and_fuse_contiguous_ranges($chosen_ranges));
+
 	return;
 }
 
 sub choose_cpus {
-	my $self = shift;
-	my $cpus_structure = shift;
-	my $target_number = shift;
+	my ($self, $cpus_structure, $target_number) = @_;
 
 	my @suitable_levels = grep {$_->[0]->{total_original_size} >= $target_number} (@{$cpus_structure});
 
-	# Find the first block with enough CPUs for the job
 	my $chosen_block;
 
 	for my $structure_level (@suitable_levels) {
@@ -87,7 +82,7 @@ sub choose_cpus {
 			}
 		}
 
-		last if (defined $chosen_block);
+		last if defined $chosen_block;
 	}
 
 	my @chosen_ranges;
@@ -110,6 +105,7 @@ sub choose_cpus {
 		$range_end = $range_start;
 	}
 
+	return @chosen_ranges if wantarray;
 	return \@chosen_ranges;
 }
 
