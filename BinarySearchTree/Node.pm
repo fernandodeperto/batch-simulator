@@ -43,12 +43,13 @@ sub rotate {
 	}
 
 	$father->set_father($self, $direction);
+
 	return;
 }
 
 sub other_direction {
 	my $direction = shift;
-	return (1-$direction);
+	return (1 - $direction);
 }
 
 sub add {
@@ -197,8 +198,6 @@ sub nodes_loop {
 
 sub children {
 	my $self = shift;
-	my @children;
-
 	return map {defined $_ ? $_ : ()} @{$self->{children}};
 }
 
@@ -206,6 +205,7 @@ sub children {
 sub get_direction_for {
 	my $self = shift;
 	my $key = shift;
+
 	return ($key < $self->{content}) ? LEFT : RIGHT;
 }
 
@@ -242,6 +242,7 @@ sub save_svg {
 	print $fd "}";
 
 	system "dot -Tsvg -o$filename $dotfile";
+
 	close($fd);
 	return;
 }

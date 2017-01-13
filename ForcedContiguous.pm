@@ -8,7 +8,7 @@ use Data::Dumper;
 use ProcessorRange;
 
 sub new {
-	my $class = shift;
+	my ($class) = @_;
 
 	my $self = {};
 
@@ -17,11 +17,9 @@ sub new {
 }
 
 sub reduce {
-	my $self = shift;
-	my $job = shift;
-	my $left_processors = shift;
-	my @remaining_ranges;
+	my ($self, $job, $left_processors) = @_;
 
+	my @remaining_ranges;
 	my $target_number = $job->requested_cpus();
 
 	$left_processors->ranges_loop(

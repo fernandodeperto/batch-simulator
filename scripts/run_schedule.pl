@@ -23,7 +23,7 @@ my @platform_levels = $config->param("$platform_name.platform_levels");
 my @platform_slowdown = $config->param("$platform_name.platform_slowdown");
 
 my $platform = Platform->new(\@platform_levels);
-$platform->set_slowdown(\@platform_slowdown);
+$platform->slowdown(\@platform_slowdown);
 
 my $traces_path = $config->param('paths.traces');
 my $swf_filename = $config->param("$platform_name.swf_file");

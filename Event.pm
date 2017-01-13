@@ -5,12 +5,12 @@ use warnings;
 use overload '<=>' => \&three_way_comparison, '""' => \&stringification;
 
 sub new {
-	my $class = shift;
+	my ($class, $type, $timestamp, $payload) = @_;
 
 	my $self = {
-		type => shift,
-		timestamp => shift,
-		payload => shift
+		type => $type,
+		timestamp => $timestamp,
+		payload => $payload,
 	};
 
 	bless $self, $class;
@@ -18,8 +18,7 @@ sub new {
 }
 
 sub type {
-	my $self = shift;
-	my $type = shift;
+	my ($self, $type) = @_;
 
 	$self->{type} = $type if (defined $type);
 
@@ -27,8 +26,7 @@ sub type {
 }
 
 sub timestamp {
-	my $self = shift;
-	my $timestamp = shift;
+	my ($self, $timestamp) = @_;
 
 	$self->{timestamp} = $timestamp if (defined $timestamp);
 
@@ -36,8 +34,7 @@ sub timestamp {
 }
 
 sub payload {
-	my $self = shift;
-	my $payload = shift;
+	my ($self, $payload) = @_;
 
 	$self->{payload} = $payload if (defined $payload);
 
@@ -45,9 +42,7 @@ sub payload {
 }
 
 sub three_way_comparison {
-	my $self = shift;
-	my $other = shift;
-	my $inverted = shift;
+	my ($self, $other, $inverted) = @_;
 
 	return $self->{type} <=> $other->{type} if
 	($self->{timestamp} == $other->{timestamp});
@@ -56,7 +51,7 @@ sub three_way_comparison {
 }
 
 sub stringification {
-	my $self = shift;
+	my ($self) = @_;
 	return "[$self->{type}, $self->{timestamp}, ($self->{payload})]";
 }
 

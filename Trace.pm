@@ -13,18 +13,18 @@ use Data::Dumper qw(Dumper);
 use Job;
 
 sub new {
-	my $class = shift;
-	my $self = { jobs => [] };
+	my ($class) = @_;
+
+	my $self = {
+		jobs => []
+	};
+
 	bless $self, $class;
 	return $self;
 }
 
 sub save_json {
-	my $self = shift;
-	my $file = shift;
-	my $cpus_number = shift;
-	my $comm_factor = shift;
-	my $comp_factor = shift;
+	my ($self, $file, $cpus_number, $comm_factor, $comp_factor) = @_;
 
 	my $json = {
 		version => 0,
@@ -56,8 +56,6 @@ sub save_json {
 		};
 	}
 
-
-
 	my $json_text = to_json( $json, { pretty => 1, canonical => 1 } );
 	open(my $fd, '>', $file) or die "not open possible for $file";
 	print $fd "$json_text\n";
@@ -67,14 +65,15 @@ sub save_json {
 }
 
 sub add_job {
-	my $self = shift;
-	push @{$self->{jobs}}, shift;
+	my ($self, $job) = @_;
+
+	push @{$self->{jobs}}, $job;
+
 	return;
 }
 
 sub new_from_swf {
-	my $class = shift;
-	my $filename = shift;
+	my ($class, $filename) = @_;
 
 	my $self = {
 		filename => $filename,
@@ -109,15 +108,15 @@ sub new_from_swf {
 }
 
 sub keep_first_jobs {
-	my $self = shift;
-	my $jobs_number = shift;
+	my ($self, $jobs_number) = @_;
 
 	$self->{jobs} = [@{$self->{jobs}}[0..($jobs_number - 1)]] if $jobs_number < scalar @{$self->{jobs}};
+
 	return;
 }
 
 sub reset_requested_times {
-	my $self = shift;
+	my ($self) = @_;
 
 	$_->{requested_time} = $_->{run_time} for @{$self->{jobs}};
 
@@ -125,7 +124,8 @@ sub reset_requested_times {
 }
 
 sub fix_submit_times {
-	my $self = shift;
+	my ($self) = @_;
+
 	my $start = $self->{jobs}->[0]->submit_time();
 
 	$_->submit_time($_->submit_time() - $start) for @{$self->{jobs}};
@@ -134,9 +134,8 @@ sub fix_submit_times {
 }
 
 sub new_block_from_trace {
-	my $class = shift;
-	my $trace = shift;
-	my $size = shift;
+	my ($class, $trace, $size) = @_;
+
 	my $start_point = int(rand(scalar @{$trace->jobs()} - $size + 1));
 	my $end_point = $start_point + $size - 1;
 	my @selected_jobs = @{$trace->jobs()}[$start_point..$end_point];
@@ -150,9 +149,7 @@ sub new_block_from_trace {
 }
 
 sub new_from_trace {
-	my $class = shift;
-	my $trace = shift;
-	my $size = shift;
+	my ($class, $trace, $size) = @_;
 
 	die 'empty trace' unless defined $trace->{jobs}->[0];
 
@@ -168,8 +165,7 @@ sub new_from_trace {
 }
 
 sub copy_from_trace {
-	my $class = shift;
-	my $trace = shift;
+	my ($class, $trace) = @_;
 
 	my $self = {
 		jobs => []
@@ -185,8 +181,7 @@ sub copy_from_trace {
 }
 
 sub copy {
-	my $class = shift;
-	my $original = shift;
+	my ($class, $original) = @_;
 
 	my $self = {
 		jobs => []
@@ -236,7 +231,7 @@ sub copy_random_time_period {
 }
 
 sub remove_submit_times {
-	my $self = shift;
+	my ($self) = @_;
 
 	$_->submit_time(0) for (@{$self->{jobs}});
 
@@ -244,7 +239,7 @@ sub remove_submit_times {
 }
 
 sub reset_jobs_numbers {
-	my $self = shift;
+	my ($self) = @_;
 
 	$self->{jobs}->[$_ - 1]->job_number($_) for (1..(@{$self->{jobs}}));
 
@@ -252,24 +247,23 @@ sub reset_jobs_numbers {
 }
 
 sub write {
-	my $self = shift;
-	my $trace_file_name = shift;
+	my ($self, $trace_filename) = @_;
 
-	open(my $filehandle, '>', "$trace_file_name") or die "unable to open $trace_file_name";
+	open(my $filehandle, '>', "$trace_filename") or die "unable to open $trace_filename";
+
 	print $filehandle "$_\n" for (@{$self->{jobs}});
-	close($filehandle);
 
+	close($filehandle);
 	return;
 }
 
 sub needed_cpus {
-	my $self = shift;
+	my ($self) = @_;
 	return max map {$_->requested_cpus()} @{$self->{jobs}};
 }
 
 sub jobs {
-	my $self = shift;
-	my $jobs = shift;
+	my ($self, $jobs) = @_;
 
 	$self->{jobs} = $jobs if defined $jobs;
 
@@ -277,15 +271,13 @@ sub jobs {
 }
 
 sub job {
-	my $self = shift;
-	my $job_number = shift;
+	my ($self, $job_number) = @_;
 
 	return $self->{jobs}->[$job_number];
 }
 
 sub remove_large_jobs {
-	my $self = shift;
-	my $limit = shift;
+	my ($self, $limit) = @_;
 
 	my @left_jobs = grep {$_->requested_cpus() <= $limit} @{$self->{jobs}};
 	$self->{jobs} = [@left_jobs];
@@ -294,7 +286,7 @@ sub remove_large_jobs {
 }
 
 sub unassign_jobs {
-	my $self = shift;
+	my ($self) = @_;
 
 	$_->unassign() for @{$self->{jobs}};
 
@@ -302,14 +294,14 @@ sub unassign_jobs {
 }
 
 sub load {
-	my $self = shift;
-	my $processors_number = shift;
+	my ($self, $processors_number) = @_;
+
 	my $jobs_number = scalar @{$self->{jobs}};
 	my $first_job_index = floor($jobs_number * 0.01);
 	my $first_job = $self->{jobs}->[$first_job_index];
 	my $t_start = $first_job->submit_time() + $first_job->wait_time();
 	my @valid_jobs = @{$self->{jobs}}[$first_job_index..$#{$self->{jobs}}];
-	my $last_submit_time = $self->{jobs}->[$#{$self->{jobs}}]->submit_time();
+	my $last_submit_time = $self->{jobs}->[-1]->submit_time();
 
 	@valid_jobs = grep {$_->submit_time() + $_->wait_time() + $_->run_time() < $last_submit_time} @valid_jobs;
 	my $t_end = max map {$_->submit_time() + $_->wait_time() + $_->run_time()} @valid_jobs;
@@ -319,17 +311,19 @@ sub load {
 }
 
 sub normalize_run_times {
-	my $self = shift;
-	my $factor = shift;
+	my ($self, $factor) = @_;
 
 	$_->run_time(max(int($_->requested_time()/$factor), $_->run_time())) for (@{$self->{jobs}});
+
+	return;
 }
 
 sub normalize_requested_times {
-	my $self = shift;
-	my $factor = shift;
+	my ($self, $factor) = @_;
 
 	$_->requested_time($_->run_time() * $factor) for (@{$self->{jobs}});
+
+	return;
 }
 
 1;
