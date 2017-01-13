@@ -23,7 +23,7 @@ use constant {
 };
 
 sub new {
-	my ($class, $reduction_algorithm, $communication_level, @remaining_parameters) = @_;
+	my ($class, $reduction_algorithm, @remaining_parameters) = @_;
 
 	my $self = $class->SUPER::new(@remaining_parameters);
 
@@ -33,7 +33,6 @@ sub new {
 	);
 
 	$self->{current_time} = 0;
-	$self->{communication_level} = $communication_level;
 
 	return $self;
 }
