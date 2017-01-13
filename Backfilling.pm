@@ -7,6 +7,7 @@ use Exporter qw(import);
 use Time::HiRes qw(time);
 use Data::Dumper;
 use List::Util qw(max min shuffle);
+use Math::Random qw(random_normal);
 
 use Util qw($config);
 use ExecutionProfile;
