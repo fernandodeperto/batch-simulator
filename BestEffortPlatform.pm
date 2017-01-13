@@ -25,9 +25,9 @@ our @EXPORT_OK = qw(
 );
 
 sub new {
-	my ($class, $platform) = @_;
+	my ($class, $platform, @remaining_parameters) = @_;
 
-	my %args = @_;
+	my %args = @remaining_parameters;
 	my $mode = $args{mode} or DEFAULT;
 
 	my $self = {

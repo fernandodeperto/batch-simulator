@@ -74,9 +74,12 @@ sub get_free_processors {
 sub available_processors {
 	my ($self, $starting_time) = @_;
 
+	my @available_processors;
+
 	my $profile = $self->{profile_tree}->find_content($starting_time);
-	return $profile->processors()->processors_ids() if defined $profile;
-	return;
+	@available_processors = $profile->processors()->processors_ids() if defined $profile;
+
+	return @available_processors;
 }
 
 sub remove_job {

@@ -10,9 +10,9 @@ use ProcessorRange;
 use BestEffortPlatform qw(DEFAULT SMALLEST_FIRST BIGGEST_FIRST);
 
 sub new {
-	my ($class) = @_;
+	my ($class, @remaining_parameters) = @_;
 
-	my $self = $class->SUPER::new(@_);
+	my $self = $class->SUPER::new(@remaining_parameters);
 
 	bless $self, $class;
 	return $self;

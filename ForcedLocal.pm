@@ -7,12 +7,10 @@ use Data::Dumper;
 use POSIX qw(ceil);
 use List::Util qw(min sum);
 
-use ProcessorRange;
-
 sub new {
-	my ($class) = @_;
+	my ($class, @remaining_parameters) = @_;
 
-	my $self = $class->SUPER::new(@_);
+	my $self = $class->SUPER::new(@remaining_parameters);
 
 	bless $self, $class;
 	return $self;

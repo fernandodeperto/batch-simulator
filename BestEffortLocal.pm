@@ -6,8 +6,6 @@ use warnings;
 use Data::Dumper;
 use List::Util qw(min sum);
 
-use ProcessorRange;
-
 sub new {
 	my ($class, $platform) = @_;
 
