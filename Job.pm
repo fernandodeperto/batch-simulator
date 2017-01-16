@@ -217,6 +217,14 @@ sub assigned_processors {
 	return $self->{assigned_processors};
 }
 
+sub benchmark_data {
+	my ($self, $benchmark_data) = @_;
+
+	$self->{benchmark_data} = $benchmark_data if defined $benchmark_data;
+
+	return $self->{benchmark_data};
+}
+
 # Ending time
 
 sub real_ending_time {

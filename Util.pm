@@ -70,12 +70,15 @@ sub get_benchmark_data {
 	open(my $benchmark_file, '<', $benchmark_filename) or die 'unable to open the benchmark data file';
 
 	my $header = <$benchmark_file>;
+	chomp $header;
+	my @header_parts = split(' ', $header);
+
 	my %benchmark_data;
 
 	while (defined(my $line = <$benchmark_file>)) {
 		my @line_parts = split(' ', $line);
 
-		$benchmark_data{$line_parts[0]}{$line_parts[1]}{$line_parts[2]} = $line_parts[3];
+		$benchmark_data{$line_parts[0]}->{$header_parts[$_]} = $line_parts[$_] for 1..3;
 	}
 
 	return %benchmark_data if wantarray;

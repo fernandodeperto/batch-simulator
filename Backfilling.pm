@@ -8,6 +8,7 @@ use Time::HiRes qw(time);
 use Data::Dumper;
 use List::Util qw(max min shuffle);
 use Math::Random qw(random_normal);
+use Switch;
 
 use Util qw($config);
 use ExecutionProfile;
@@ -23,7 +24,12 @@ use constant {
 };
 
 sub new {
-	my ($class, $reduction_algorithm, @remaining_parameters) = @_;
+	my (
+		$class,
+		$reduction_algorithm,
+		$benchmark_data,
+		@remaining_parameters
+	) = @_;
 
 	my $self = $class->SUPER::new(@remaining_parameters);
 
@@ -33,6 +39,8 @@ sub new {
 	);
 
 	$self->{current_time} = 0;
+
+	$self->{benchmark_data} = $benchmark_data;
 
 	return $self;
 }
@@ -166,27 +174,45 @@ sub assign_job {
 
 	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile($job);
 
-	# here we can decide the new run time based on the platform level
-	if (defined $self->{platform}->slowdown()) {
-		my $job_platform_level = $self->{platform}->job_level_distance($chosen_processors);
-		my $job_minimum_level = $self->{platform}->job_minimum_level_distance($job->requested_cpus());
+	my $job_platform_level = $self->{platform}->job_level_distance($chosen_processors);
+	my $job_minimum_level = $self->{platform}->job_minimum_level_distance($job->requested_cpus());
 
-		if ($job_platform_level != $job_minimum_level) {
-			my $slowdown = $self->{platform}->slowdown($job_platform_level - 1) /
-				$self->{platform}->slowdown($job_minimum_level - 1);
+	# assign the communication profile
+	switch ($config->param('backfilling.penalty_job_assignment')) {
+		case 'random_benchmark' {
+			my @benchmark_data_keys = keys %{$self->{benchmark_data}};
+			my $chosen_key = $benchmark_data_keys[rand @benchmark_data_keys];
+			
+			$job->benchmark_data($self->{benchmark_data}->{$chosen_key});
+		}
 
-			my $new_job_run_time = int((1 - $self->{communication_level}) * $job->run_time() +
-				$slowdown * $self->{communication_level} * $job->run_time());
-				
-
-			if ($new_job_run_time > $job->requested_time()) {
-				$job->run_time($job->requested_time());
-				$job->status(JOB_STATUS_FAILED);
-			} else {
-				$job->run_time($new_job_run_time);
-			}
+		else {
+			die 'unknown penalty job assignment option';
 		}
 	}
+	
+	
+	# assign the penalty function
+
+	# here we can decide the new run time based on the platform level
+	#if (defined $self->{platform}->slowdown()) {
+
+	#	if ($job_platform_level != $job_minimum_level) {
+	#		my $slowdown = $self->{platform}->slowdown($job_platform_level - 1) /
+	#			$self->{platform}->slowdown($job_minimum_level - 1);
+
+	#		my $new_job_run_time = int((1 - $self->{communication_level}) * $job->run_time() +
+	#			$slowdown * $self->{communication_level} * $job->run_time());
+	#			
+
+	#		if ($new_job_run_time > $job->requested_time()) {
+	#			$job->run_time($job->requested_time());
+	#			$job->status(JOB_STATUS_FAILED);
+	#		} else {
+	#			$job->run_time($new_job_run_time);
+	#		}
+	#	}
+	#}
 
 	$job->assign($starting_time, $chosen_processors);
 	$self->{execution_profile}->add_job($starting_time, $job);
