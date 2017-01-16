@@ -217,12 +217,12 @@ sub assigned_processors {
 	return $self->{assigned_processors};
 }
 
-sub benchmark_data {
-	my ($self, $benchmark_data) = @_;
+sub communication_level {
+	my ($self, $communication_level) = @_;
 
-	$self->{benchmark_data} = $benchmark_data if defined $benchmark_data;
+	$self->{communication_level} = $communication_level if defined $communication_level;
 
-	return $self->{benchmark_data};
+	return $self->{communication_level};
 }
 
 # Ending time

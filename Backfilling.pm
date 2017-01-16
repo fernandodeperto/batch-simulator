@@ -7,7 +7,7 @@ use Exporter qw(import);
 use Time::HiRes qw(time);
 use Data::Dumper;
 use List::Util qw(max min shuffle);
-use Math::Random qw(random_normal);
+use Math::Random qw(random_normal random_uniform);
 use Switch;
 
 use Util qw($config);
@@ -177,42 +177,59 @@ sub assign_job {
 	my $job_platform_level = $self->{platform}->job_level_distance($chosen_processors);
 	my $job_minimum_level = $self->{platform}->job_minimum_level_distance($job->requested_cpus());
 
-	# assign the communication profile
-	switch ($config->param('backfilling.penalty_job_assignment')) {
-		case 'random_benchmark' {
-			my @benchmark_data_keys = keys %{$self->{benchmark_data}};
-			my $chosen_key = $benchmark_data_keys[rand @benchmark_data_keys];
-			
-			$job->benchmark_data($self->{benchmark_data}->{$chosen_key});
+	if ($job_platform_level != $job_minimum_level) {
+		# assign the communication profile
+		switch ($config->param('backfilling.penalty_job_assignment')) {
+			case 'random_benchmark' {
+				my @benchmark_data_keys = keys %{$self->{benchmark_data}};
+				my $chosen_key = $benchmark_data_keys[rand @benchmark_data_keys];
+				
+				$job->communication_level($self->{benchmark_data}->{$chosen_key}->{COMMUNICATION_TIME});
+			}
+
+			case 'random_percentage_normal' {
+				my $chosen_percentage = random_normal(1,
+					$config->param('backfilling.penalty_job_assignment_normal_average'),
+					$config->param('backfilling.penalty_job_assignment_normal_deviation'),
+				);
+
+				$job->communication_level($chosen_percentage);
+			}
+
+			case 'random_percentage_uniform' {
+				my $chosen_percentage = random_uniform(1,
+					$config->param('backfilling.penalty_job_assignment_uniform_min'),
+					$config->param('backfilling.penalty_job_assignment_uniform_max'),
+				);
+
+				$job->communication_level($chosen_percentage);
+			}
+		}
+		
+		# assign the penalty function
+		my $penalty_rate;
+
+		switch ($config->param('backfilling.penalty_function')) {
+			case 'linear' {
+				$penalty_rate = ($job_platform_level - $job_minimum_level) * $config->param('backfilling.penalty_function_linear_factor');
+			}
+
+			case 'quadratic' {
+				$penalty_rate = $config->param('backfilling.penalty_function_quadratic_factor') ** ($job_platform_level - $job_minimum_level)
+			}
+
+			case 'benchmark' {
+				die unless $config->param('backfilling.penalty_job_assignment') eq 'random_benchmark';
+			}
+
+			else {
+				die 'unknown penalty function';
+			}
 		}
 
-		else {
-			die 'unknown penalty job assignment option';
-		}
+		my $new_job_run_time = int((1 - $job->communication_level()) * $job->run_time() +
+			$penalty_rate * $job->communication_level() * $job->run_time());
 	}
-	
-	
-	# assign the penalty function
-
-	# here we can decide the new run time based on the platform level
-	#if (defined $self->{platform}->slowdown()) {
-
-	#	if ($job_platform_level != $job_minimum_level) {
-	#		my $slowdown = $self->{platform}->slowdown($job_platform_level - 1) /
-	#			$self->{platform}->slowdown($job_minimum_level - 1);
-
-	#		my $new_job_run_time = int((1 - $self->{communication_level}) * $job->run_time() +
-	#			$slowdown * $self->{communication_level} * $job->run_time());
-	#			
-
-	#		if ($new_job_run_time > $job->requested_time()) {
-	#			$job->run_time($job->requested_time());
-	#			$job->status(JOB_STATUS_FAILED);
-	#		} else {
-	#			$job->run_time($new_job_run_time);
-	#		}
-	#	}
-	#}
 
 	$job->assign($starting_time, $chosen_processors);
 	$self->{execution_profile}->add_job($starting_time, $job);
