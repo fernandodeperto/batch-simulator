@@ -243,6 +243,17 @@ sub generate_slowdown {
 	return;
 }
 
+sub run_benchmark {
+	my ($self, $benchmark, $platform_file, $hosts_config, $script) = @_;
+
+	my $hosts_filename = '/tmp/hosts';
+	my $cpus_number = @$hosts_config;
+
+	save_hosts_file($hosts_config, $hosts_filename);
+
+	return `$script $cpus_number $platform_file $hosts_filename $benchmark 2>&1`;
+}
+
 sub set_slowdown_from_latencies {
 	my ($self, $latencies) = @_;
 
