@@ -16,6 +16,7 @@ our @EXPORT_OK = qw(
 	git_version
 	$config
 	get_benchmark_data
+	get_comm_data
 );
 
 our $config;
@@ -83,6 +84,29 @@ sub get_benchmark_data {
 
 	return %benchmark_data if wantarray;
 	return \%benchmark_data;
+}
+
+sub get_comm_data {
+	my ($comm_data_filename) = @_;
+
+	open(my $comm_data_file, '<', $comm_data_filename) or die 'unable to open comm data file';
+
+	my $comm_data_header = <$comm_data_file>;
+	chomp $comm_data_header;
+	my @comm_data_header_parts = split(' ', $comm_data_header);
+
+	my %comm_data;
+
+	while (defined(my $line = <$comm_data_file>)) {
+		chomp $line;
+
+		my @line_parts = split(' ', $line);
+
+		$comm_data{$line_parts[0]}->{$comm_data_header_parts[$_]} = $line_parts[$_] for 1..3;
+	}
+
+	return %comm_data if wantarray;
+	return \%comm_data;
 }
 
 1;

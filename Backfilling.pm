@@ -28,6 +28,7 @@ sub new {
 		$class,
 		$reduction_algorithm,
 		$benchmark_data,
+		$comm_data,
 		@remaining_parameters
 	) = @_;
 
@@ -41,6 +42,7 @@ sub new {
 	$self->{current_time} = 0;
 
 	$self->{benchmark_data} = $benchmark_data;
+	$self->{comm_data} = $comm_data;
 
 	return $self;
 }
@@ -178,37 +180,29 @@ sub assign_job {
 	my $job_minimum_level = $self->{platform}->job_minimum_level_distance($job->requested_cpus());
 
 	if ($job_platform_level != $job_minimum_level) {
-		# assign the communication profile
+		my $communication_level;
+		my $chosen_benchmark;
+
 		switch ($config->param('backfilling.penalty_job_assignment')) {
 			case 'random_benchmark' {
-				my @benchmark_data_keys = keys %{$self->{benchmark_data}};
-				my $chosen_key = $benchmark_data_keys[rand @benchmark_data_keys];
-				
-				$job->communication_level($self->{benchmark_data}->{$chosen_key}->{COMMUNICATION_TIME});
+				$chosen_benchmark = $self->{comm_data}->{$job->job_number()}->{BENCHMARK};
+				$communication_level = $self->{benchmark_data}->{$chosen_benchmark}->{COMMUNICATION_TIME};
 			}
 
 			case 'random_percentage_normal' {
-				my $chosen_percentage = random_normal(1,
-					$config->param('backfilling.penalty_job_assignment_normal_average'),
-					$config->param('backfilling.penalty_job_assignment_normal_deviation'),
-				);
-
-				$job->communication_level($chosen_percentage);
+				$communication_level = $self->{comm_data}->{$job->job_number()}->{NORMAL_PERCENT};
 			}
 
 			case 'random_percentage_uniform' {
-				my $chosen_percentage = random_uniform(1,
-					$config->param('backfilling.penalty_job_assignment_uniform_min'),
-					$config->param('backfilling.penalty_job_assignment_uniform_max'),
-				);
+				$communication_level = $self->{comm_data}->{$job->job_number()}->{UNIFORM_PERCENT};
+			}
 
-				$job->communication_level($chosen_percentage);
+			else {
+				die 'unknown communication profile used';
 			}
 		}
-		
-		# assign the penalty function
-		my $penalty_rate;
 
+		my $penalty_rate;
 		switch ($config->param('backfilling.penalty_function')) {
 			case 'linear' {
 				$penalty_rate = ($job_platform_level - $job_minimum_level) * $config->param('backfilling.penalty_function_linear_factor');
@@ -227,8 +221,15 @@ sub assign_job {
 			}
 		}
 
-		my $new_job_run_time = int((1 - $job->communication_level()) * $job->run_time() +
-			$penalty_rate * $job->communication_level() * $job->run_time());
+		my $new_job_run_time = int((1 - $communication_level) * $job->run_time() +
+			$penalty_rate * $communication_level * $job->run_time());
+
+		if ($new_job_run_time > $job->requested_time()) {
+			$job->run_time($job->requested_time());
+			$job->status(JOB_STATUS_FAILED);
+		} else {
+			$job->run_time($new_job_run_time);
+		}
 	}
 
 	$job->assign($starting_time, $chosen_processors);
