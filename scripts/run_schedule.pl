@@ -5,7 +5,7 @@ use warnings;
 use Data::Dumper qw(Dumper);
 use Config::Simple;
 
-use Util qw($config get_benchmark_data);
+use Util qw($config get_benchmark_data get_comm_data);
 use Trace;
 use Backfilling;
 use Basic;
@@ -27,19 +27,21 @@ $platform->slowdown(\@platform_slowdown);
 
 my $traces_path = $config->param('paths.traces');
 my $swf_filename = $config->param("$platform_name.swf_file");
+my $comm_data_filename = $config->param("$platform_name.comm_data");
 my $jobs_number = $config->param('parameters.jobs_number');
 
 my $trace = Trace->new_from_swf("$traces_path/$swf_filename");
 $trace->remove_large_jobs($platform->processors_number());
-$trace->reset_jobs_numbers();
+#$trace->reset_jobs_numbers();
 $trace->fix_submit_times();
 $trace->keep_first_jobs($jobs_number) if defined $jobs_number;
 
 my $benchmark_data = get_benchmark_data($config->param('paths.percentages'));
+my $comm_data = get_comm_data("$traces_path/$comm_data_filename");
 
 my $reduction_algorithm = Basic->new($platform);
 
-my $schedule = Backfilling->new($reduction_algorithm, $benchmark_data, $platform, $trace);
+my $schedule = Backfilling->new($reduction_algorithm, $benchmark_data, $comm_data, $platform, $trace);
 $schedule->run();
 
 my @results = (

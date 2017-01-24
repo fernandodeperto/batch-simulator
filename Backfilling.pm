@@ -1,12 +1,11 @@
 package Backfilling;
-use parent 'Schedule';
 use strict;
 use warnings;
 
 use Exporter qw(import);
 use Time::HiRes qw(time);
 use Data::Dumper;
-use List::Util qw(max min shuffle);
+use List::Util qw(max min shuffle sum);
 use Math::Random qw(random_normal random_uniform);
 use Switch;
 
@@ -23,29 +22,163 @@ use constant {
 	JOB_COMPLETION_EVENT => 2,
 };
 
+# Constructors
+
 sub new {
 	my (
 		$class,
 		$reduction_algorithm,
 		$benchmark_data,
 		$comm_data,
-		@remaining_parameters
+		$platform,
+		$trace,
 	) = @_;
 
-	my $self = $class->SUPER::new(@remaining_parameters);
+	my $self = {
+		benchmark_data => $benchmark_data,
+		cmax => 0,
+		comm_data => $comm_data,
+		current_time => 0,
+		execution_profile => ExecutionProfile->new(
+			$platform->processors_number(),
+			$reduction_algorithm,
+		),
+		platform => $platform,
+		trace => $trace,
+	};
 
-	$self->{execution_profile} = ExecutionProfile->new(
-		$self->{platform}->processors_number(),
-		$reduction_algorithm,
-	);
+	die "not enough processors: ", $self->{trace}->needed_cpus() if
+		$self->{trace}->needed_cpus() > $self->{platform}->processors_number();
 
-	$self->{current_time} = 0;
 
-	$self->{benchmark_data} = $benchmark_data;
-	$self->{comm_data} = $comm_data;
-
+	bless $self, $class;
 	return $self;
 }
+
+# Getters and setters
+
+sub trace {
+	my ($self) = @_;
+	return $self->{trace};
+}
+
+sub cmax {
+	my ($self) = @_;
+	return max map {$_->real_ending_time()} (@{$self->{trace}->jobs()});
+}
+
+sub sum_flow_time {
+	my ($self) = @_;
+	return sum map {$_->flow_time()} @{$self->{trace}->jobs()};
+}
+
+sub max_flow_time {
+	my ($self) = @_;
+	return max map {$_->flow_time()} @{$self->{trace}->jobs()};
+}
+
+sub mean_flow_time {
+	my ($self) = @_;
+	return $self->sum_flow_time() / @{$self->{trace}->jobs()};
+}
+
+sub sum_stretch {
+	my ($self) = @_;
+	return sum map {$_->bounded_stretch()} @{$self->{trace}->jobs()};
+}
+
+sub max_stretch {
+	my ($self) = @_;
+	return max map {$_->bounded_stretch()} @{$self->{trace}->jobs()};
+}
+
+sub mean_stretch {
+	my ($self) = @_;
+	return (sum map {$_->stretch()} @{$self->{trace}->jobs()}) / @{$self->{trace}->jobs()};
+}
+
+sub bounded_stretch {
+	my ($self, $bound) = @_;
+
+	$bound = 10 unless defined $bound;
+
+	my $jobs_number = scalar @{$self->{trace}->jobs()};
+	my $total_bounded_stretch = sum map {$_->bounded_stretch($bound)} (@{$self->{trace}->jobs()});
+
+	return $total_bounded_stretch/$jobs_number;
+}
+
+sub stretch_sum_of_squares {
+	my ($self) = @_;
+	return sqrt(sum map {$_->bounded_stretch(10) ** 2} (@{$self->{trace}->jobs()}));
+}
+
+sub stretch_with_cpus_squared {
+	my ($self) = @_;
+	return sum map {$_->bounded_stretch_with_cpus_squared(10)} (@{$self->{trace}->jobs()});
+}
+
+sub stretch_with_cpus_log {
+	my ($self) = @_;
+	return sum map {$_->bounded_stretch_with_cpus_log(10)} (@{$self->{trace}->jobs()});
+}
+
+sub flow_time_pnorm {
+	my ($self) = @_;
+
+	my $pnorm = $config->param('parameters.pnorm');
+
+	return pow((sum map {defined $_->flow_time() ? pow($_->flow_time(), $pnorm) : 0} @{$self->{trace}->jobs()}), 1/$pnorm);
+}
+
+sub stretch_pnorm {
+	my ($self) = @_;
+
+	my $pnorm = $config->param('parameters.pnorm');
+
+	return pow((sum map {defined $_->bounded_stretch() ? pow($_->bounded_stretch(), $pnorm) : 0} @{$self->{trace}->jobs()}), 1/$pnorm);
+}
+
+sub contiguous_jobs_number {
+	my ($self) = @_;
+	return sum map {$self->{platform}->job_contiguity($_->assigned_processors())} (@{$self->{trace}->jobs()});
+}
+
+sub contiguity_factor {
+	my ($self) = @_;
+
+	my $total_contiguity_factor = sum map {$self->{platform}->job_contiguity_factor($_->assigned_processors())} (@{$self->{trace}->jobs()});
+
+	return $total_contiguity_factor/scalar @{$self->{trace}->jobs()};
+}
+
+sub local_jobs_number {
+	my ($self) = @_;
+	return sum map {$self->{platform}->job_locality($_->assigned_processors())} (@{$self->{trace}->jobs()});
+}
+
+sub locality_factor {
+	my ($self) = @_;
+
+	my $total_locality_factor = sum map {$self->{platform}->job_locality_factor($_->assigned_processors())} (@{$self->{trace}->jobs()});
+
+	return $total_locality_factor/scalar @{$self->{trace}->jobs()};
+}
+
+sub platform_level_factor {
+	my ($self) = @_;
+
+	my $job_level_distances = sum map {$self->{platform}->job_relative_level_distance($_->assigned_processors(), $_->requested_cpus())} (@{$self->{trace}->jobs()});
+
+	return $job_level_distances / scalar @{$self->{trace}->jobs()};
+}
+
+sub job_success_rate {
+	my ($self) = @_;
+	return sum map {($_->status() == JOB_STATUS_COMPLETED) ? 1 : 0} (@{$self->{trace}->jobs()});
+}
+
+# Functions
 
 sub run {
 	my ($self) = @_;
