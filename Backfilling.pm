@@ -8,6 +8,7 @@ use Data::Dumper;
 use List::Util qw(max min shuffle sum);
 use Math::Random qw(random_normal random_uniform);
 use Switch;
+use POSIX qw(pow);
 
 use Util qw($config);
 use ExecutionProfile;
@@ -30,6 +31,8 @@ sub new {
 		$reduction_algorithm,
 		$platform,
 		$trace,
+		$penalty_function,
+		$penalty_factor,
 	) = @_;
 
 	my $self = {
@@ -41,6 +44,8 @@ sub new {
 		),
 		platform => $platform,
 		trace => $trace,
+		penalty_function => $penalty_function,
+		penalty_factor => $penalty_factor,
 	};
 
 	die "not enough processors: ", $self->{trace}->needed_cpus() if
@@ -172,6 +177,11 @@ sub platform_level_factor {
 sub job_success_rate {
 	my ($self) = @_;
 	return sum map {($_->status() == JOB_STATUS_COMPLETED) ? 1 : 0} (@{$self->{trace}->jobs()});
+}
+
+sub run_time {
+	my ($self) = @_;
+	return $self->{run_time};
 }
 
 # Functions
@@ -311,13 +321,13 @@ sub assign_job {
 	if ($job_platform_level != $job_minimum_level) {
 		my $penalty_rate;
 
-		switch ($config->param('backfilling.penalty_function')) {
+		switch ($self->{penalty_function}) {
 			case 'linear' {
-				$penalty_rate = ($job_platform_level - $job_minimum_level) * $config->param('backfilling.penalty_function_linear_factor');
+				$penalty_rate = ($job_platform_level - $job_minimum_level) * $self->{penalty_factor};
 			}
 
 			case 'quadratic' {
-				$penalty_rate = $config->param('backfilling.penalty_function_quadratic_factor') ** ($job_platform_level - $job_minimum_level)
+				$penalty_rate = $self->{penalty_factor} ** ($job_platform_level - $job_minimum_level)
 			}
 		}
 
