@@ -28,16 +28,12 @@ sub new {
 	my (
 		$class,
 		$reduction_algorithm,
-		$benchmark_data,
-		$comm_data,
 		$platform,
 		$trace,
 	) = @_;
 
 	my $self = {
-		benchmark_data => $benchmark_data,
 		cmax => 0,
-		comm_data => $comm_data,
 		current_time => 0,
 		execution_profile => ExecutionProfile->new(
 			$platform->processors_number(),
@@ -313,29 +309,8 @@ sub assign_job {
 	my $job_minimum_level = $self->{platform}->job_minimum_level_distance($job->requested_cpus());
 
 	if ($job_platform_level != $job_minimum_level) {
-		my $communication_level;
-		my $chosen_benchmark;
-
-		switch ($config->param('backfilling.penalty_job_assignment')) {
-			case 'random_benchmark' {
-				$chosen_benchmark = $self->{comm_data}->{$job->job_number()}->{BENCHMARK};
-				$communication_level = $self->{benchmark_data}->{$chosen_benchmark}->{COMMUNICATION_TIME};
-			}
-
-			case 'random_percentage_normal' {
-				$communication_level = $self->{comm_data}->{$job->job_number()}->{NORMAL_PERCENT};
-			}
-
-			case 'random_percentage_uniform' {
-				$communication_level = $self->{comm_data}->{$job->job_number()}->{UNIFORM_PERCENT};
-			}
-
-			else {
-				die 'unknown communication profile used';
-			}
-		}
-
 		my $penalty_rate;
+
 		switch ($config->param('backfilling.penalty_function')) {
 			case 'linear' {
 				$penalty_rate = ($job_platform_level - $job_minimum_level) * $config->param('backfilling.penalty_function_linear_factor');
@@ -344,18 +319,9 @@ sub assign_job {
 			case 'quadratic' {
 				$penalty_rate = $config->param('backfilling.penalty_function_quadratic_factor') ** ($job_platform_level - $job_minimum_level)
 			}
-
-			case 'benchmark' {
-				die unless $config->param('backfilling.penalty_job_assignment') eq 'random_benchmark';
-			}
-
-			else {
-				die 'unknown penalty function';
-			}
 		}
 
-		my $new_job_run_time = int((1 - $communication_level) * $job->run_time() +
-			$penalty_rate * $communication_level * $job->run_time());
+		my $new_job_run_time = int($job->run_time() * $penalty_rate);
 
 		if ($new_job_run_time > $job->requested_time()) {
 			$job->run_time($job->requested_time());
