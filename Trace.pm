@@ -4,7 +4,6 @@ use warnings;
 
 use JSON;
 use List::Util qw(max reduce sum min);
-use List::MoreUtils qw(natatime);
 use Storable qw(dclone);
 use POSIX qw(ceil floor);
 use Clone qw(clone);
