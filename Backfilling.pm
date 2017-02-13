@@ -8,6 +8,7 @@ use Data::Dumper;
 use List::Util qw(max min shuffle sum);
 use Switch;
 use POSIX qw(pow);
+use Log::Log4perl qw(:no_extra_logdie_message get_logger);
 
 use Util qw($config);
 use ExecutionProfile;
@@ -188,6 +189,8 @@ sub run_time {
 sub run {
 	my ($self) = @_;
 
+	my $logger = get_logger('Backfilling::run');
+
 	$self->{reserved_jobs} = []; # jobs not started yet
 	$self->{started_jobs} = {}; # jobs that have already started
 
@@ -207,12 +210,16 @@ sub run {
 		$self->{current_time} = $events[0]->timestamp();
 		$self->{execution_profile}->set_current_time($self->{current_time});
 
+		$logger->trace("current time: $self->{current_time}");
+
 		my @typed_events;
 		push @{$typed_events[$_->type()]}, $_ for @events;
 
+		$logger->trace("submission events: @{$typed_events[SUBMISSION_EVENT]}");
+		$logger->trace("ending events: @{$typed_events[JOB_COMPLETION_EVENT]}");
+
 		for my $event (@{$typed_events[JOB_COMPLETION_EVENT]}) {
 			my $job = $event->payload();
-
 			$self->{execution_profile}->remove_job($job, $self->{current_time}) unless $job->requested_time() == $job->run_time();
 		}
 
@@ -223,7 +230,7 @@ sub run {
 			my $job = $event->payload();
 
 			$self->assign_job($job);
-			die "job " . $job->job_number() . " was not assigned" unless defined $job->starting_time();
+			$logger->logdie("job " . $job->job_number() . " was not assigned") unless defined $job->starting_time();
 
 			push @{$self->{reserved_jobs}}, $job;
 
@@ -241,12 +248,10 @@ sub run {
 	}
 
 	# all jobs should be scheduled and started
-	die 'there are still jobs in the reserved queue' if @{$self->{reserved_jobs}};
+	$logger->logdie('there are still jobs in the reserved queue') if @{$self->{reserved_jobs}};
 
 	$self->{execution_profile}->free_profiles();
-
 	$self->{run_time} = time() - $self->{run_time};
-
 	return;
 }
 
@@ -256,6 +261,8 @@ sub start_jobs {
 
 	for my $job (@{$self->{reserved_jobs}}) {
 		if ($job->starting_time() == $self->{current_time}) {
+			$logger->trace('job ' . $job->job_number() . ' starting');
+
 			$self->{events}->add(
 				Event->new(
 					JOB_COMPLETION_EVENT,
@@ -275,8 +282,14 @@ sub start_jobs {
 sub reassign_jobs {
 	my ($self) = @_;
 
+	my $logger = get_logger('Backfilling:reassign_jobs');
+
 	for my $job (@{$self->{reserved_jobs}}) {
+		$logger->trace('trying to reassign job ' . $job->job_number());
+
 		next unless $self->{execution_profile}->available_processors($self->{current_time}) >= $job->requested_cpus();
+
+		$logger->trace('available processors');
 
 		my $job_starting_time = $job->starting_time();
 		my $assigned_processors = $job->assigned_processors();
@@ -288,12 +301,16 @@ sub reassign_jobs {
 			next;
 		}
 
+		$logger->trace('could start job');
+
 		my $new_processors = $self->{execution_profile}->get_free_processors($job, $self->{current_time});
 
 		unless (defined $new_processors) {
 			$self->{execution_profile}->add_job($job_starting_time, $job);
 			next;
 		}
+
+		$logger->trace('new processors defined');
 
 		$job->assign($self->{current_time}, $new_processors);
 		$self->{execution_profile}->add_job($self->{current_time}, $job);
@@ -305,10 +322,18 @@ sub reassign_jobs {
 sub assign_job {
 	my ($self, $job) = @_;
 
+	my $logger = get_logger('Backfilling::assign_job');
+
+	$logger->trace('assigning job ' . $job->job_number())
+
 	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile($job);
+
+	$logger->trace("chose starting time:processors $starting_time:$chosen_processors");
 
 	my $job_platform_level = $self->{platform}->job_level_distance($chosen_processors);
 	my $job_minimum_level = $self->{platform}->job_minimum_level_distance($job->requested_cpus());
+
+	$logger->trace("job levels $job_platform_level/$job_minimum_level");
 
 	if ($job_platform_level != $job_minimum_level) {
 		my $penalty_rate;
@@ -324,6 +349,8 @@ sub assign_job {
 		}
 
 		my $new_job_run_time = int($job->run_time() * $penalty_rate);
+
+		$logger->trace(
 
 		if ($new_job_run_time > $job->requested_time()) {
 			$job->run_time($job->requested_time());
