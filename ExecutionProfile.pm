@@ -21,9 +21,9 @@ sub new {
 	my $self = {
 		processors_number => $processors_number,
 		reduction_algorithm => $reduction_algorithm,
+		profile_tree => BinarySearchTree->new(-1, 0),
 	};
 
-	$self->{profile_tree} = BinarySearchTree->new(-1, 0);
 	$self->{profile_tree}->add_content(Profile->new(0, undef, [0, $self->{processors_number} - 1]));
 
 	bless $self, $class;
@@ -189,14 +189,12 @@ sub add_job  {
 	my ($self, $starting_time, $job) = @_;
 
 	my @profiles_to_update;
-	my $ending_time = $starting_time + $job->requested_time();
 
-	$self->{profile_tree}->nodes_loop($starting_time, $ending_time,
+	$self->{profile_tree}->nodes_loop($starting_time, undef,
 		sub {
 			my ($profile) = @_;
 
-			# avoid including a profile that starts at $ending_time
-			return 0 if $profile->starting_time() == $ending_time;
+			return 0 if $profile->starting_time() >= $starting_time + $job->requested_time();
 
 			push @profiles_to_update, $profile;
 			return 1;
@@ -204,9 +202,8 @@ sub add_job  {
 
 	for my $profile (@profiles_to_update) {
 		$self->{profile_tree}->remove_content($profile);
-		my @new_profiles = $profile->add_job($job);
+		$self->{profile_tree}->add_content($_) for $profile->add_job($job);
 		$profile->processors()->free_allocated_memory();
-		$self->{profile_tree}->add_content($_) for (@new_profiles);
 	}
 
 	return;
@@ -215,32 +212,37 @@ sub add_job  {
 sub could_start_job {
 	my ($self, $job, $starting_time) = @_;
 
-	my $min_processors = $job->requested_cpus();
-	my $job_ending_time = $starting_time + $job->requested_time();
+	my $enough_processors = 1;
+	my $included_time = 0;
 
 	$self->{profile_tree}->nodes_loop($starting_time, undef,
 		sub {
 			my ($profile) = @_;
 
 			# gap in the profile, can't use it to run the job
-			unless ($starting_time == $profile->starting_time()) {
-				$min_processors = 0;
+			return 0 if $starting_time != $profile->starting_time();
+
+			# not enough cpus
+			if ($profile->processors()->size() < $job->requested_cpus()) {
+				$enough_processors = 0;
 				return 0;
 			}
 
 			# ok to return if it's the last profile
-			return 0 unless defined $profile->duration();
+			unless (defined $profile->duration()) {
+				$included_time = $job->requested_time();
+				return 0;
+			}
 
-			$starting_time += $profile->duration();
-			$min_processors = min($min_processors, $profile->processors()->size());
+			$included_time += $profile->duration();
 
 			# ok to return, profile may be good for the job
-			return 0 if $starting_time >= $job_ending_time;
+			return 0 if $starting_time >= $job->requested_time();
 
 			return 1;
 		});
 
-	return $min_processors >= $job->requested_cpus();
+	return ($enough_processors and $included_time >= $job->requested_time());
 }
 
 sub find_first_profile {
@@ -258,16 +260,21 @@ sub find_first_profile {
 		sub {
 			my ($profile) = @_;
 
-			# gap in the list of profiles
-			@included_profiles = () if defined $previous_ending_time and $previous_ending_time != $profile->starting_time();
+			# not enough processors
+			if ($profile->processors()->size() < $job->requested_cpus()) {
+				@included_profiles = ();
+				return 1;
+			}
 
-			$previous_ending_time = $profile->ending_time();
+			# gap in the list of profiles
+			@included_profiles = () if defined $previous_ending_time and
+				$previous_ending_time != $profile->starting_time();
+
 			push @included_profiles, $profile;
 
-			# not enough processors to continue
-			@included_profiles = () if $profile->processors()->size() < $job->requested_cpus();
+			while (@included_profiles and (not defined $included_profiles[-1]->ending_time() or
+				$included_profiles[-1]->ending_time() - $included_profiles[0]->starting_time() > $job->requested_time())) {
 
-			while (@included_profiles and (not defined $included_profiles[-1]->ending_time() or $included_profiles[-1]->ending_time() - $included_profiles[0]->starting_time() > $job->requested_time())) {
 				my $start_profile = shift @included_profiles;
 
 				$starting_time = $start_profile->starting_time();
@@ -275,6 +282,7 @@ sub find_first_profile {
 				return 0 if defined $processors;
 			}
 
+			$previous_ending_time = $profile->ending_time();
 			return 1;
 		});
 
@@ -288,16 +296,13 @@ sub set_current_time {
 	my $updated_profile;
 	my @removed_profiles;
 
-	$self->{profile_tree}->nodes_loop(undef, $current_time,
+	$self->{profile_tree}->nodes_loop(undef, undef,
 		sub {
 			my ($profile) = @_;
 
 			return 0 if $profile->starting_time() == $current_time;
 
-			my $starting_time = $profile->starting_time();
-			my $ending_time = $profile->ending_time();
-
-			if (not defined $ending_time or $ending_time > $current_time) {
+			if (not defined $profile->ending_time() or $profile->ending_time() > $current_time) {
 				$updated_profile = $profile;
 				return 0;
 			}

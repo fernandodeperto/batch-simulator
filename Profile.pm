@@ -9,9 +9,6 @@ use Data::Dumper qw(Dumper);
 use Carp;
 use List::Util qw(min);
 
-use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
-use ProcessorRange;
-
 use overload
 	'""' => \&stringification,
 	'<=>' => \&three_way_comparison,
@@ -23,7 +20,7 @@ sub new {
 
 	my $self = {
 		starting_time => $starting_time,
-		ending_time => $ending_time
+		ending_time => $ending_time,
 	};
 
 	die "invalid profile duration ($self->{ending_time} - $self->{starting_time}" if defined $self->{ending_time} and $self->{ending_time} <= $self->{starting_time};

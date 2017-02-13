@@ -219,10 +219,6 @@ sub run {
 		# reassign all reserved jobs if any job finished
 		$self->reassign_jobs() if $config->param('backfilling.reassign_jobs') and scalar @{$typed_events[JOB_COMPLETION_EVENT]};
 
-		# submission events
-		@{$typed_events[SUBMISSION_EVENT]} = sort {$a->payload()->requested_time() <=> $b->payload()->requested_time()} (@{$typed_events[SUBMISSION_EVENT]}) if $config->param('backfilling.sort_sumitted_jobs');
-		@{$typed_events[SUBMISSION_EVENT]} = shuffle @{$typed_events[SUBMISSION_EVENT]} if $config->param('backfilling.shuffle_submitted_jobs');
-
 		for my $event (@{$typed_events[SUBMISSION_EVENT]}) {
 			my $job = $event->payload();
 
@@ -258,8 +254,6 @@ sub start_jobs {
 	my ($self) = @_;
 	my @remaining_reserved_jobs;
 
-	@{$self->{reserved_jobs}} = sort {$a->requested_time() <=> $b->requested_time()} (@{$self->{reserved_jobs}}) if $config->param('backfilling.sort_reserved_jobs');
-
 	for my $job (@{$self->{reserved_jobs}}) {
 		if ($job->starting_time() == $self->{current_time}) {
 			$self->{events}->add(
@@ -279,7 +273,7 @@ sub start_jobs {
 }
 
 sub reassign_jobs {
-	my ($self, $latest_ending_time) = @_;
+	my ($self) = @_;
 
 	for my $job (@{$self->{reserved_jobs}}) {
 		next unless $self->{execution_profile}->available_processors($self->{current_time}) >= $job->requested_cpus();
@@ -302,7 +296,6 @@ sub reassign_jobs {
 		}
 
 		$job->assign($self->{current_time}, $new_processors);
-		$self->{execution_profile}->remove_job($job, $self->{current_time});
 		$self->{execution_profile}->add_job($self->{current_time}, $job);
 	}
 
