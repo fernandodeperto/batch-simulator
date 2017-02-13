@@ -189,7 +189,7 @@ sub run_time {
 sub run {
 	my ($self) = @_;
 
-	my $logger = get_logger('Backfilling::run');
+	my $logger = get_logger('Backfilling.run');
 
 	$self->{reserved_jobs} = []; # jobs not started yet
 	$self->{started_jobs} = {}; # jobs that have already started
@@ -215,8 +215,8 @@ sub run {
 		my @typed_events;
 		push @{$typed_events[$_->type()]}, $_ for @events;
 
-		$logger->trace("submission events: @{$typed_events[SUBMISSION_EVENT]}");
-		$logger->trace("ending events: @{$typed_events[JOB_COMPLETION_EVENT]}");
+		$logger->trace("submission events: @{$typed_events[SUBMISSION_EVENT]}") if $typed_events[SUBMISSION_EVENT];
+		$logger->trace("ending events: @{$typed_events[JOB_COMPLETION_EVENT]}") if $typed_events[JOB_COMPLETION_EVENT];
 
 		for my $event (@{$typed_events[JOB_COMPLETION_EVENT]}) {
 			my $job = $event->payload();
@@ -258,6 +258,8 @@ sub run {
 sub start_jobs {
 	my ($self) = @_;
 	my @remaining_reserved_jobs;
+
+	my $logger = get_logger('Backfilling::start_jobs');
 
 	for my $job (@{$self->{reserved_jobs}}) {
 		if ($job->starting_time() == $self->{current_time}) {
@@ -324,7 +326,7 @@ sub assign_job {
 
 	my $logger = get_logger('Backfilling::assign_job');
 
-	$logger->trace('assigning job ' . $job->job_number())
+	$logger->trace('assigning job ' . $job->job_number());
 
 	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile($job);
 
@@ -350,7 +352,7 @@ sub assign_job {
 
 		my $new_job_run_time = int($job->run_time() * $penalty_rate);
 
-		$logger->trace(
+		$logger->trace("new job run time: $new_job_run_time");
 
 		if ($new_job_run_time > $job->requested_time()) {
 			$job->run_time($job->requested_time());
