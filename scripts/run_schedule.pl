@@ -5,8 +5,9 @@ use warnings;
 use Data::Dumper qw(Dumper);
 use Config::Simple;
 use Switch;
+use Log::Log4perl qw(:no_extra_logdie_message get_logger);
 
-use Util qw($config get_benchmark_data get_comm_data);
+use Util qw($config);
 use Trace;
 use Backfilling;
 use Basic;
@@ -18,6 +19,9 @@ use BestEffortPlatform qw(SMALLEST_FIRST BIGGEST_FIRST);
 use ForcedPlatform;
 
 $config = Config::Simple->new('test.conf');
+
+Log::Log4perl->init($config->param('parameters.log_conf'));
+my $logger = get_logger('run_schedule');
 
 my $platform_name = $config->param('parameters.platform_name');
 my @platform_levels = $config->param("$platform_name.platform_levels");
@@ -91,8 +95,12 @@ for my $variant_name ($config->param('parameters.variant_names')) {
 		#$schedule->run_time(),
 	);
 
-	print STDOUT join(' ', @results) . "\n";
+	$logger->info(join(' ', @results));
 }
 
-print "done\n";
+$logger->info('done');
+
+sub get_log_file {
+	return $config->param('parameters.log_file');
+}
 

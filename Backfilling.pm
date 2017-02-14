@@ -350,9 +350,11 @@ sub assign_job {
 			}
 		}
 
+		$logger->trace("using penalty function and factor $self->{penalty_function} $self->{penalty_factor}");
+
 		my $new_job_run_time = int($job->run_time() * $penalty_rate);
 
-		$logger->trace("new job run time: $new_job_run_time");
+		$logger->trace("new job run time: $new_job_run_time/" . $job->run_time());
 
 		if ($new_job_run_time > $job->requested_time()) {
 			$job->run_time($job->requested_time());
