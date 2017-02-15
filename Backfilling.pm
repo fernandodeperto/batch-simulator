@@ -338,23 +338,20 @@ sub assign_job {
 	$logger->trace("job levels $job_platform_level/$job_minimum_level");
 
 	if ($job_platform_level != $job_minimum_level) {
-		my $penalty_rate;
+		my $new_job_run_time;
 
 		switch ($self->{penalty_function}) {
 			case 'linear' {
-				$penalty_rate = ($job_platform_level - $job_minimum_level) * $self->{penalty_factor};
+				$new_job_run_time = $job->run_time() * (1 + ($job_platform_level - $job_minimum_level) * $self->{penalty_factor});
 			}
 
 			case 'quadratic' {
-				$penalty_rate = $self->{penalty_factor} ** ($job_platform_level - $job_minimum_level)
+				$new_job_run_time = $job->run_time() * $self->{penalty_factor} ** ($job_platform_level - $job_minimum_level)
 			}
 		}
 
-		$logger->trace("using penalty function and factor $self->{penalty_function} $self->{penalty_factor}");
-
-		my $new_job_run_time = int($job->run_time() * $penalty_rate);
-
-		$logger->trace("new job run time: $new_job_run_time/" . $job->run_time());
+		$logger->trace("using penalty function $self->{penalty_function} and factor $self->{penalty_factor}");
+		$logger->trace("new job run time: $new_job_run_time (from " . $job->run_time() . ')');
 
 		if ($new_job_run_time > $job->requested_time()) {
 			$job->run_time($job->requested_time());
