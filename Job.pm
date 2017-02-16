@@ -289,6 +289,13 @@ sub wait_time {
 	return $self->{starting_time} - $self->{submit_time};
 }
 
+sub original_run_time {
+	my ($self, $original_run_time) = @_;
+
+	$self->{original_run_time} = $original_run_time if defined $original_run_time;
+	return $self->{original_run_time};
+}
+
 # Assignment
 
 sub unassign {

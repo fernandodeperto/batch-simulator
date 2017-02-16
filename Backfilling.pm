@@ -350,6 +350,8 @@ sub assign_job {
 			}
 		}
 
+		$job->original_run_time($job->run_time());
+
 		$logger->trace("using penalty function $self->{penalty_function} and factor $self->{penalty_factor}");
 		$logger->trace("new job run time: $new_job_run_time (from " . $job->run_time() . ')');
 
